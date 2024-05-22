@@ -1,4 +1,4 @@
-package com.topocart.app.cadastro;
+package com.topocart.siga.mobile;
 
 import com.getcapacitor.BridgeActivity;
 

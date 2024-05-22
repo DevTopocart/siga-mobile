@@ -5,50 +5,35 @@ import {
   IonContent,
   IonFabButton,
   IonHeader,
-  IonLoading,
   useIonActionSheet,
   useIonToast
 } from "@ionic/react";
 import { Feature } from "ol";
-import { FeatureLike } from "ol/Feature";
 import { Coordinate } from "ol/coordinate";
-import { Point } from "ol/geom";
-import Geometry from "ol/geom/Geometry";
+import GeoJSON from "ol/format/GeoJSON";
+import { Point, Polygon } from "ol/geom";
 import "ol/ol.css";
 import { fromLonLat } from "ol/proj";
-import { Fill, Text as OlText, Stroke, Style } from "ol/style";
 import { useEffect, useRef, useState } from "react";
-import { GiPositionMarker } from "react-icons/gi";
+import { FiLayers } from "react-icons/fi";
+import { GiHouse, GiPositionMarker } from "react-icons/gi";
 import { useHistory } from "react-router";
-import {
-  RFeature,
-  RLayerTile,
-  RLayerVector,
-  RMap,
-  RStyle
-} from "rlayers";
+import { RFeature, RLayerTile, RLayerVector, RMap, RStyle } from "rlayers";
 import { RView } from "rlayers/RMap";
-import {
-  LeftButtonsContainer,
-  RightButtonsContainer
-} from "./styles";
+import { useApp } from "../../contexts/AppContext";
+import { GeoserverGeoJSON } from "../../interfaces";
+import { clearData, getLayers } from "../../services/db";
+import { LeftButtonsContainer, RightButtonsContainer } from "./styles";
 import "./styles.css";
 
 export default function Map() {
   const history = useHistory();
-
-  const [present] = useIonActionSheet();
-  const [presentToast] = useIonToast();
-
-  CapApp.addListener("backButton", (e) => {
-    if (history.location.pathname === "/map") {
-      history.push("/map");
-    }
-  });
-
   useEffect(() => console.log("Render"), []);
 
-  /* Connection hooks n states */
+  /* App hooks and states */
+  const { basemaps } = useApp();
+
+  /* Connection hooks and states */
   const [isConnected, setIsConnected] = useState(false);
   useEffect(() => {
     const listener = Network.addListener("networkStatusChange", (status) => {
@@ -62,6 +47,16 @@ export default function Map() {
     };
   }, []);
 
+  /* UI hooks e states */
+  const [present] = useIonActionSheet();
+  const [presentToast] = useIonToast();
+
+  CapApp.addListener("backButton", (e) => {
+    if (history.location.pathname === "/map") {
+      history.push("/map");
+    }
+  });
+
   function toast(message: string) {
     presentToast({
       message: message,
@@ -72,158 +67,63 @@ export default function Map() {
 
   /* Map logic, hooks and states */
   let map = useRef<RMap>(null);
-
-  const mapStyles = {
-    lote: (feature: FeatureLike, isOnline: boolean) => {
-      const status = feature.get("status_campo");
-      let stroke;
-      let strokeWidth;
-
-      switch (status) {
-        case 1: // Disponivel
-          stroke = "#000000";
-          strokeWidth = isOnline ? 2 : 2;
-          break;
-        case 2: // Revisita
-          stroke = "#001aff";
-          strokeWidth = isOnline ? 2 : 2;
-          break;
-        case 3: // Concluido
-          stroke = "#3cff00";
-          strokeWidth = isOnline ? 2 : 2;
-          break;
-        default:
-          stroke = "#ffffff";
-          strokeWidth = isOnline ? 2 : 2;
-          break;
-      }
-
-      var mainStyle = new Style({
-        fill: new Fill({
-          color: "#ffffff00",
-        }),
-        stroke: new Stroke({
-          color: stroke,
-          width: strokeWidth,
-        }),
-      });
-
-      var baseStyle = new Style({
-        stroke: new Stroke({
-          color: "#ffffff",
-          width: 5,
-        }),
-      });
-
-      return isOnline ? [mainStyle] : [baseStyle, mainStyle];
-    },
-    logradouro: (feature: FeatureLike) => {
-      const nome = feature.get("nome");
-      const id = feature.get("id");
-
-      var text = new OlText({
-        text: `${nome} (${id})`,
-        fill: new Fill({ color: "#ffffff" }),
-        stroke: new Stroke({ color: "#000000", width: 3 }),
-        placement: "line",
-      });
-
-      var mainStyle = new Style({
-        stroke: new Stroke({
-          color: "rgb(255,255,255)",
-          width: 3,
-        }),
-        text: text,
-      });
-
-      var baseStyle = new Style({
-        stroke: new Stroke({
-          color: "#000000",
-          width: 5,
-        }),
-      });
-
-      return [baseStyle, mainStyle];
-    },
-    logradouroOffline: (feature: FeatureLike) => {
-      const nome = feature.get("nome");
-      const id = feature.get("id");
-
-      var text = new OlText({
-        text: `${nome} (${id})`,
-        fill: new Fill({ color: "#ffffff" }),
-        stroke: new Stroke({ color: "#000000", width: 3 }),
-        placement: "line",
-      });
-
-      var mainStyle = new Style({
-        stroke: new Stroke({
-          color: "rgb(255,255,255)",
-          width: 3,
-        }),
-        text: text,
-      });
-
-      var baseStyle = new Style({
-        stroke: new Stroke({
-          color: "#000000",
-          width: 5,
-        }),
-      });
-
-      return [baseStyle, mainStyle];
-    },
-    loteSelecionado: `#FFE600`,
-    edificacaoOnline: `#ffcfcf`,
-    edificacaoLote: `#BCBCBC`,
-    edificacaoImobiliario: `#C77272`,
-    edificacaoSelecionada: `#FA0707`,
-  };
-
   const initialView = {
     "center": [
-        -4934237.693764885,
-        -2632962.737977016
+        -4932263.369981612,
+        -2631855.098882083
     ],
-    "zoom": 12.425022330927394,
-    "resolution": 28.46618897541094
+    "zoom": 15.86196947686721,
+    "resolution": 2.6284828255507837
 };
   const [view, setView] = useState<RView>(initialView);
-  console.log("🚀 ~ Map ~ view:", view)
-  const [lotes, setLotes] = useState<Feature<Geometry>[]>([]);
-  const [logradourosProximos, setlogradourosProximos] = useState<
-    Feature<Geometry>[]
-  >([]);
-  const [selectedLote, setSelectedLote] = useState<Geometry>();
   const [localization, setLocalization] = useState<Coordinate>();
+  const [layers,setLayers] = useState<GeoserverGeoJSON[]>()
 
-  function handleClick(id: number, geometry: Geometry) {
-    console.log(geometry);
+  async function makeLayers() {
+    const layers = await getLayers()
+    setLayers(layers)
   }
 
+  useEffect(() => {
+    makeLayers()
+  }, [layers])
+  
   return (
     <IonContent>
-      <IonHeader>
-      </IonHeader>
-      <IonLoading
-        message={
-          'test'
-        }
-        isOpen={
-          false
-        }
-      ></IonLoading>
+      <IonHeader></IonHeader>
       <LeftButtonsContainer>
-        {/* <IonFabButton
+        <IonFabButton
           size="small"
-          color={"secondary"}
-          onClick={() => history.push("/intro")}
+          onClick={() => clearData()}
         >
-          <GiExitDoor size={20} />
-        </IonFabButton> */}
-
+          CL
+        </IonFabButton>
+        <IonFabButton
+          size="small"
+          onClick={() => makeLayers()}
+        >
+          SW
+        </IonFabButton>
       </LeftButtonsContainer>
       <RightButtonsContainer>
+        <IonFabButton
+          size="small"
+          color={"primary"}
+          onClick={() => {
+            history.push("/layers");
+          }}
+        >
+          <FiLayers size={20} />
+        </IonFabButton>
+        <IonFabButton
+          size="small"
+          color={"primary"}
+          onClick={() => {
+            setView(initialView);
+          }}
+        >
+          <GiHouse size={20} />
+        </IonFabButton>
         <IonFabButton
           size="small"
           color={"primary"}
@@ -249,22 +149,10 @@ export default function Map() {
         view={[view, setView]}
       >
         <RLayerTile
-          url={`http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}`}
+          url={basemaps.active.url}
           zIndex={11}
         />
 
-        {/* <ROSM /> */}
-
-        {selectedLote && (
-          <RLayerVector zIndex={102}>
-            <RFeature geometry={selectedLote}>
-              <RStyle.RStyle>
-                <RStyle.RStroke color={mapStyles.loteSelecionado} width={3} />
-                <RStyle.RFill color={mapStyles.loteSelecionado + "10"} />
-              </RStyle.RStyle>
-            </RFeature>
-          </RLayerVector>
-        )}
         {localization && (
           <RLayerVector zIndex={998}>
             <RFeature geometry={new Point(localization)}>
@@ -283,8 +171,26 @@ export default function Map() {
             </RFeature>
           </RLayerVector>
         )}
-        <RLayerVector>
-        </RLayerVector>
+
+        {
+          layers && layers.map((layer, index) => (
+            <RLayerVector
+              key={index}
+              zIndex={200 + index}
+              features={
+                new GeoJSON({ featureProjection: "EPSG:3857", dataProjection: "EPSG:4326"}).readFeatures(
+                  layer
+                ) as Feature<Polygon>[]
+              }
+              onClick={(e) => console.log(e)}
+            >
+              <RStyle.RStyle>
+                <RStyle.RStroke color="red" width={1} />
+                <RStyle.RFill color="rgba(20,20,20,0)" />
+              </RStyle.RStyle>
+            </RLayerVector>
+          ))
+        }
       </RMap>
     </IonContent>
   );

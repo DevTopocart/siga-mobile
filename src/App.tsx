@@ -19,41 +19,48 @@ import "@ionic/react/css/text-alignment.css";
 import "@ionic/react/css/text-transformation.css";
 
 /* Theme variables */
+import { AppProvider } from "./contexts/AppContext";
 import Details from "./pages/Details";
 import Intro from "./pages/Intro";
 import LayerManager from "./pages/LayerManager";
 import List from "./pages/List";
 import Map from "./pages/Map";
+import { makeDatabase } from "./services/db";
 import "./theme/globals.css";
 import "./theme/variables.css";
 
 /* Import Pages */
 
 setupIonicReact();
+makeDatabase();
 
 export default function App() {
-  return <IonApp>
-    <IonReactRouter>
-      <IonRouterOutlet>
-        <Route exact path="/intro">
-          <Intro/>
-        </Route>
-        <Route exact path="/map">
-          <Map/>
-        </Route>
-        <Route exact path="/layer-manager">
-          <LayerManager/>
-        </Route>
-        <Route exact path="/details">
-          <Details/>
-        </Route>
-        <Route exact path="/list">
-          <List/>
-        </Route>
-        <Route exact path="/">
-          <Redirect to="/intro" />
-        </Route>
-      </IonRouterOutlet>
-    </IonReactRouter>
-  </IonApp>
-} 
+  return (
+    <IonApp>
+      <IonReactRouter>
+        <IonRouterOutlet>
+          <AppProvider>
+            <Route exact path="/intro">
+              <Intro />
+            </Route>
+            <Route exact path="/map">
+              <Map />
+            </Route>
+            <Route exact path="/layers">
+              <LayerManager />
+            </Route>
+            <Route exact path="/details">
+              <Details />
+            </Route>
+            <Route exact path="/list">
+              <List />
+            </Route>
+            <Route exact path="/">
+              <Redirect to="/intro" />
+            </Route>
+          </AppProvider>
+        </IonRouterOutlet>
+      </IonReactRouter>
+    </IonApp>
+  );
+}
