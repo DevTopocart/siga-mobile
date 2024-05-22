@@ -15,7 +15,7 @@ export async function geoserver(
 ) {
   const url = new URL(endpoint, "http://siga.angra.rj.gov.br");
 
-  console.info('Fetching URL on Geoserver:', url.toString())
+  console.info("Fetching URL on Geoserver:", url.toString());
 
   Object.keys(params).forEach((key) =>
     url.searchParams.append(key, params[key]),

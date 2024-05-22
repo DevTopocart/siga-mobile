@@ -7,10 +7,9 @@ import { isNumber } from "lodash";
  * @returns Uma string formatada que pode ser usada em consultas SQL.
  */
 export default function formatFid(fid: string) {
-    if (isNumber(+fid)) {
-      return `'${fid}'`;
-    } else {
-      return fid;
-    }
+  if (isNumber(+fid)) {
+    return `'${fid}'`;
+  } else {
+    return fid;
   }
-  
+}

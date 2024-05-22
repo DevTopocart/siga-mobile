@@ -2,11 +2,12 @@ import { App as CapApp } from "@capacitor/app";
 import { Geolocation } from "@capacitor/geolocation";
 import { Network } from "@capacitor/network";
 import {
+  IonButton,
   IonContent,
   IonFabButton,
   IonHeader,
   useIonActionSheet,
-  useIonToast
+  useIonToast,
 } from "@ionic/react";
 import { Feature } from "ol";
 import { Coordinate } from "ol/coordinate";
@@ -19,19 +20,21 @@ import { FiLayers } from "react-icons/fi";
 import { GiHouse, GiPositionMarker } from "react-icons/gi";
 import { useHistory } from "react-router";
 import { RFeature, RLayerTile, RLayerVector, RMap, RStyle } from "rlayers";
-import { RView } from "rlayers/RMap";
 import { useApp } from "../../contexts/AppContext";
 import { GeoserverGeoJSON } from "../../interfaces";
 import { clearData, getLayers } from "../../services/db";
-import { LeftButtonsContainer, RightButtonsContainer } from "./styles";
+import {
+  BottomButtonsContainer,
+  LeftButtonsContainer,
+  RightButtonsContainer,
+} from "./styles";
 import "./styles.css";
 
 export default function Map() {
   const history = useHistory();
-  useEffect(() => console.log("Render"), []);
 
   /* App hooks and states */
-  const { basemaps } = useApp();
+  const { basemaps, view, setView, initialView } = useApp();
 
   /* Connection hooks and states */
   const [isConnected, setIsConnected] = useState(false);
@@ -67,81 +70,110 @@ export default function Map() {
 
   /* Map logic, hooks and states */
   let map = useRef<RMap>(null);
-  const initialView = {
-    "center": [
-        -4932263.369981612,
-        -2631855.098882083
-    ],
-    "zoom": 15.86196947686721,
-    "resolution": 2.6284828255507837
-};
-  const [view, setView] = useState<RView>(initialView);
   const [localization, setLocalization] = useState<Coordinate>();
-  const [layers,setLayers] = useState<GeoserverGeoJSON[]>()
+  const [layers, setLayers] = useState<GeoserverGeoJSON[]>();
+
+  let isDefaultMapView = true;
+
+  if (history.location.state) {
+    console.log(
+      "mapa iniciado em modo de seleção de área ->",
+      history.location.state,
+    );
+    isDefaultMapView = false;
+  }
 
   async function makeLayers() {
-    const layers = await getLayers()
-    setLayers(layers)
+    const layers = await getLayers();
+    setLayers(layers);
   }
 
   useEffect(() => {
     if (!layers) {
-      makeLayers()
+      makeLayers();
     }
-  }, [layers])
-  
+  }, [layers]);
+
   return (
     <IonContent>
       <IonHeader></IonHeader>
-      <LeftButtonsContainer>
-        <IonFabButton
-          size="small"
-          onClick={() => clearData()}
-        >
-          CL
-        </IonFabButton>
-        <IonFabButton
-          size="small"
-          onClick={() => makeLayers()}
-        >
-          SW
-        </IonFabButton>
-      </LeftButtonsContainer>
-      <RightButtonsContainer>
-        <IonFabButton
-          size="small"
-          color={"primary"}
-          onClick={() => {
-            history.push("/layers");
-          }}
-        >
-          <FiLayers size={20} />
-        </IonFabButton>
-        <IonFabButton
-          size="small"
-          color={"primary"}
-          onClick={() => {
-            setView(initialView);
-          }}
-        >
-          <GiHouse size={20} />
-        </IonFabButton>
-        <IonFabButton
-          size="small"
-          color={"primary"}
-          onClick={async () => {
-            Geolocation.getCurrentPosition().then((position: any) => {
-              const newCenter = fromLonLat([
-                position.coords.longitude,
-                position.coords.latitude,
-              ]);
-              setLocalization(newCenter);
-            });
-          }}
-        >
-          <GiPositionMarker size={20} />
-        </IonFabButton>
-      </RightButtonsContainer>
+      {isDefaultMapView && (
+        <LeftButtonsContainer>
+          <IonFabButton size="small" onClick={() => clearData()}>
+            CL
+          </IonFabButton>
+          <IonFabButton size="small" onClick={() => makeLayers()}>
+            SW
+          </IonFabButton>
+        </LeftButtonsContainer>
+      )}
+      {isDefaultMapView && (
+        <RightButtonsContainer>
+          <IonFabButton
+            size="small"
+            color={"primary"}
+            onClick={() => {
+              history.push("/layers");
+            }}
+          >
+            <FiLayers size={20} />
+          </IonFabButton>
+          <IonFabButton
+            size="small"
+            color={"primary"}
+            onClick={() => {
+              setView(initialView);
+            }}
+          >
+            <GiHouse size={20} />
+          </IonFabButton>
+          <IonFabButton
+            size="small"
+            color={"primary"}
+            onClick={async () => {
+              Geolocation.getCurrentPosition().then((position: any) => {
+                const newCenter = fromLonLat([
+                  position.coords.longitude,
+                  position.coords.latitude,
+                ]);
+                setLocalization(newCenter);
+              });
+            }}
+          >
+            <GiPositionMarker size={20} />
+          </IonFabButton>
+        </RightButtonsContainer>
+      )}
+      {!isDefaultMapView && (
+        <BottomButtonsContainer>
+          <IonButton
+            style={{
+              width: "90%",
+            }}
+            onClick={() =>
+              history.push("/layers", {
+                ...(history.location.state as any),
+                boundingBox: map.current?.ol
+                  .getView()
+                  .calculateExtent(map.current?.ol.getSize()),
+              })
+            }
+          >
+            OK
+          </IonButton>
+          <IonButton
+            style={{
+              width: "90%",
+            }}
+            onClick={() =>
+              history.push("/layers", {})
+            }
+            color={"danger"}
+          >
+            Cancelar
+          </IonButton>
+        </BottomButtonsContainer>
+      )}
       <RMap
         ref={map}
         width={"100%"}
@@ -150,10 +182,7 @@ export default function Map() {
         initial={view}
         view={[view, setView]}
       >
-        <RLayerTile
-          url={basemaps.active.url}
-          zIndex={11}
-        />
+        <RLayerTile url={basemaps.active.url} zIndex={11} />
 
         {localization && (
           <RLayerVector zIndex={998}>
@@ -174,15 +203,17 @@ export default function Map() {
           </RLayerVector>
         )}
 
-        {
-          layers && layers.map((layer, index) => (
+        {isDefaultMapView &&
+          layers &&
+          layers.map((layer, index) => (
             <RLayerVector
               key={index}
               zIndex={200 + index}
               features={
-                new GeoJSON({ featureProjection: "EPSG:3857", dataProjection: "EPSG:4326"}).readFeatures(
-                  layer
-                ) as Feature<Polygon>[]
+                new GeoJSON({
+                  featureProjection: "EPSG:3857",
+                  dataProjection: "EPSG:4326",
+                }).readFeatures(layer) as Feature<Polygon>[]
               }
               onClick={(e) => console.log(e)}
             >
@@ -191,8 +222,7 @@ export default function Map() {
                 <RStyle.RFill color="rgba(20,20,20,0)" />
               </RStyle.RStyle>
             </RLayerVector>
-          ))
-        }
+          ))}
       </RMap>
     </IonContent>
   );

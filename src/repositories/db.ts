@@ -39,7 +39,6 @@ export class DatabaseService {
   }
 
   public async createDefaultTables(): Promise<void> {
-
     const db = await this.connDatabase();
     await db.open();
 
@@ -48,7 +47,7 @@ export class DatabaseService {
       layer TEXT,
       data TEXT,
       UNIQUE(layer, fid)
-    );`)
+    );`);
   }
 
   public async query(sql: string, params?: any[]): Promise<any> {
@@ -85,18 +84,19 @@ export class DatabaseService {
    * @returns {Promise<any>} Uma Promise que resolve quando a operação é concluída.
    */
   public async upsert(
-    data: { [key: string]: any},
+    data: { [key: string]: any },
     table: string,
     fid: string,
   ): Promise<any> {
-    console.log(`upserting -> ${fid}@${table}`)
+    console.log(`upserting -> ${fid}@${table}`);
     const db = await this.connDatabase();
     await db.open();
 
     try {
-
       let query = `INSERT OR REPLACE INTO data (fid,data,layer,geom) VALUES
-      (${formatFid(fid)},'${JSON.stringify(data)}','${table}','${JSON.stringify(data.geometry)}');`;
+      (${formatFid(fid)},'${JSON.stringify(data)}','${table}','${JSON.stringify(
+        data.geometry,
+      )}');`;
 
       // console.log(`upserting -> ${query}`)
       return await db.execute(query);
@@ -110,7 +110,9 @@ export class DatabaseService {
     await db.open();
 
     try {
-      const row = await db.query(`SELECT * FROM data WHERE table = ${table} LIMIT 1`);
+      const row = await db.query(
+        `SELECT * FROM data WHERE table = ${table} LIMIT 1`,
+      );
 
       if (row && row.values && row.values[0]) {
         var data = JSON.parse(row.values[0].data);

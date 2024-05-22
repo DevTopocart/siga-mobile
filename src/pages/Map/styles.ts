@@ -14,17 +14,13 @@ export const RightButtonsContainer = styled.div`
   z-index: 1000;
 `;
 
-export const ContainerModal = styled.div`
-  padding: 1rem;
+export const BottomButtonsContainer = styled.div`
+  position: absolute;
+  bottom: 0.5rem;
+  width: 100%;
+  z-index: 1000;
   display: flex;
   justify-content: center;
+  align-items: center;
   flex-direction: column;
-`;
-
-export const TitleLogs = styled.p`
-  font-size: 1.2rem;
-  font-weight: 400;
-  text-align: center;
-  margin: 0.6rem;
-  padding-bottom: 0.8rem;
 `;

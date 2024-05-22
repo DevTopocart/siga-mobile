@@ -115,7 +115,7 @@ export interface GeoserverGeoJSON {
 
 export interface Crs {
   type: string;
-  properties: {[key:string]: any};
+  properties: { [key: string]: any };
 }
 
 export interface Link {
@@ -130,7 +130,7 @@ export interface GeoserverGeoJSONFeature {
   id: string;
   geometry: Geometry;
   geometry_name: string;
-  properties: {[key:string]: any};
+  properties: { [key: string]: any };
 }
 
 export interface Geometry {
