@@ -85,7 +85,9 @@ export default function Map() {
   }
 
   useEffect(() => {
-    makeLayers()
+    if (!layers) {
+      makeLayers()
+    }
   }, [layers])
   
   return (
