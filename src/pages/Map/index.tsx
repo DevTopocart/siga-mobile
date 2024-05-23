@@ -9,10 +9,11 @@ import {
   useIonActionSheet,
   useIonToast,
 } from "@ionic/react";
-import { Feature } from "ol";
+import { Feature, MapBrowserEvent } from "ol";
 import { Coordinate } from "ol/coordinate";
 import GeoJSON from "ol/format/GeoJSON";
 import { Point, Polygon } from "ol/geom";
+import { Vector } from "ol/layer";
 import "ol/ol.css";
 import { fromLonLat } from "ol/proj";
 import { useEffect, useRef, useState } from "react";
@@ -96,6 +97,25 @@ export default function Map() {
       makeLayers();
     }
   }, [layers]);
+
+  function handleMapClick(e: MapBrowserEvent<UIEvent>) {
+    if (!map.current) return;
+    const features = map.current.ol.getFeaturesAtPixel(e.pixel, {
+      layerFilter: (layer) => layer instanceof Vector,  // Filter only vector layers
+      hitTolerance: 5  // Optional: increases the clickable area around the point
+    });
+
+    if (features.length > 0) {
+      console.log("Features found:", features.map(f => {
+        return {
+          fid: f.getId(),
+          properties: f.getProperties()
+        }
+      }));
+    } else {
+      console.log("No features found at this point.");
+    }
+  }
 
   return (
     <IonContent>
@@ -187,6 +207,7 @@ export default function Map() {
         noDefaultControls={true}
         initial={view}
         view={[view, setView]}
+        onClick={(e) => handleMapClick(e)}
       >
         <RLayerTile url={basemaps.active.url} zIndex={11} />
 
@@ -221,7 +242,6 @@ export default function Map() {
                   dataProjection: "EPSG:4326",
                 }).readFeatures(layer) as Feature<Polygon>[]
               }
-              onClick={(e) => console.log(e)}
               style={layer.style}
             >
               <RStyle.RStyle>
