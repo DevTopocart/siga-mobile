@@ -30,7 +30,6 @@ export default function LayerManager() {
   const history = useHistory();
   const [onlineLayers, setOnlineLayers] = useState<FeatureType[]>();
   const [localLayers, setLocalLayers] = useState<LayerMetadata[]>();
-  console.log("🚀 ~ LayerManager ~ localLayers:", localLayers)
 
   const [presentAlert] = useIonAlert();
 
@@ -163,8 +162,6 @@ export default function LayerManager() {
   }
 
   async function handleChangeBasemap(newBasemap: string) {
-    console.log(newBasemap);
-
     const theBasemap = basemaps.basemaps.find(
       (basemap) => basemap.name === newBasemap,
     ) as Basemap;

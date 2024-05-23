@@ -13,7 +13,9 @@ export async function makeDatabase() {
 export async function showData() {
   try {
     const data = await db.query("SELECT * FROM data");
+    const layers = await db.query("SELECT * FROM layers");
     console.log("data ->", data.values);
+    console.log("layers ->", layers.values);
   } catch (error) {
     console.error(error);
   }
@@ -38,7 +40,6 @@ export async function insertFeature(
     `,
       [feature.id, layerName, JSON.stringify(feature)],
     );
-
     console.log("Feature inserted");
   } catch (error) {
     console.error(error);

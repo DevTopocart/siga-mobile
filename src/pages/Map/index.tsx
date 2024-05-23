@@ -23,9 +23,7 @@ import { useHistory } from "react-router";
 import { RFeature, RLayerTile, RLayerVector, RMap, RStyle } from "rlayers";
 import { useApp } from "../../contexts/AppContext";
 import { Layer } from "../../interfaces";
-import { clearData, getLayerList, getLayers } from "../../services/db";
-import { getLayerStyle } from "../../services/geoserver";
-import { convertSldToOl } from "../../utils/convertSldToOl";
+import { clearData, getLayers, showData } from "../../services/db";
 import {
   BottomButtonsContainer,
   LeftButtonsContainer,
@@ -79,16 +77,11 @@ export default function Map() {
   let isDefaultMapView = true;
 
   if (history.location.state) {
-    console.log(
-      "mapa iniciado em modo de seleção de área ->",
-      history.location.state,
-    );
     isDefaultMapView = false;
   }
 
   async function makeLayers() {
     const layers = await getLayers();
-    console.log("🚀 ~ makeLayers ~ layers:", layers)
     
     setLayers(layers.filter((layer) => layer.is_visible));
   }
@@ -113,9 +106,7 @@ export default function Map() {
           properties: f.getProperties()
         }
       }));
-    } else {
-      console.log("No features found at this point.");
-    }
+    } 
   }
 
   return (
@@ -126,11 +117,8 @@ export default function Map() {
           <IonFabButton size="small" onClick={() => clearData()}>
             CL
           </IonFabButton>
-          <IonFabButton size="small" onClick={async () => console.log(await getLayers(), await getLayerList())}>
+          <IonFabButton size="small" onClick={async () => await showData()}>
             SW
-          </IonFabButton>
-          <IonFabButton size="small" onClick={async () => console.log(await convertSldToOl( await getLayerStyle(`lote`) ))}>
-            LS
           </IonFabButton>
         </LeftButtonsContainer>
       )}

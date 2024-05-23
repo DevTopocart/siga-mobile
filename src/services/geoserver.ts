@@ -40,7 +40,6 @@ export async function getFeatureType(
   count: number,
   bbox: [number, number, number, number], // Bounding box as [minX, minY, maxX, maxY]
 ): Promise<GeoserverGeoJSON> {
-  console.log(startIndex, count, bbox);
   const bboxParam = bbox ? `&bbox=${bbox.join(",")},EPSG:3857` : "";
   const url = `/geoserver/Angra/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=Angra:${layerName}&outputFormat=application/json&startIndex=${startIndex}&count=${count}${bboxParam}&srsName=EPSG:4326`;
   const response = await geoserver(url, "GET");
