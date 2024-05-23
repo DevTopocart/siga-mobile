@@ -21,8 +21,10 @@ import { GiHouse, GiPositionMarker } from "react-icons/gi";
 import { useHistory } from "react-router";
 import { RFeature, RLayerTile, RLayerVector, RMap, RStyle } from "rlayers";
 import { useApp } from "../../contexts/AppContext";
-import { GeoserverGeoJSON } from "../../interfaces";
-import { clearData, getLayers } from "../../services/db";
+import { Layer } from "../../interfaces";
+import { clearData, getLayerList, getLayers } from "../../services/db";
+import { getLayerStyle } from "../../services/geoserver";
+import { convertSldToOl } from "../../utils/convertSldToOl";
 import {
   BottomButtonsContainer,
   LeftButtonsContainer,
@@ -71,7 +73,7 @@ export default function Map() {
   /* Map logic, hooks and states */
   let map = useRef<RMap>(null);
   const [localization, setLocalization] = useState<Coordinate>();
-  const [layers, setLayers] = useState<GeoserverGeoJSON[]>();
+  const [layers, setLayers] = useState<Layer[]>();
 
   let isDefaultMapView = true;
 
@@ -85,6 +87,7 @@ export default function Map() {
 
   async function makeLayers() {
     const layers = await getLayers();
+    console.log("🚀 ~ makeLayers ~ layers:", layers)
     setLayers(layers);
   }
 
@@ -102,8 +105,11 @@ export default function Map() {
           <IonFabButton size="small" onClick={() => clearData()}>
             CL
           </IonFabButton>
-          <IonFabButton size="small" onClick={() => makeLayers()}>
+          <IonFabButton size="small" onClick={async () => console.log(await getLayers(), await getLayerList())}>
             SW
+          </IonFabButton>
+          <IonFabButton size="small" onClick={async () => console.log(await convertSldToOl( await getLayerStyle(`lote`) ))}>
+            LS
           </IonFabButton>
         </LeftButtonsContainer>
       )}
@@ -216,6 +222,7 @@ export default function Map() {
                 }).readFeatures(layer) as Feature<Polygon>[]
               }
               onClick={(e) => console.log(e)}
+              style={layer.style}
             >
               <RStyle.RStyle>
                 <RStyle.RStroke color="red" width={1} />

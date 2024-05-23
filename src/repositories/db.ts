@@ -3,7 +3,6 @@ import {
   SQLiteConnection,
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
-import formatFid from "../utils/formatFid";
 
 export class DatabaseService {
   private static instance: DatabaseService;
@@ -48,6 +47,14 @@ export class DatabaseService {
       data TEXT,
       UNIQUE(layer, fid)
     );`);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS layers (
+        layer TEXT PRIMARY KEY,
+        style TEXT,
+        is_visible BOOLEAN DEFAULT TRUE,
+        UNIQUE (layer)
+      );`)
   }
 
   public async query(sql: string, params?: any[]): Promise<any> {
@@ -69,69 +76,6 @@ export class DatabaseService {
     try {
       const result = await db.execute(sql);
       return result;
-    } finally {
-      // await db.close();
-    }
-  }
-
-  /**
-   * Atualiza ou insere dados em uma tabela específica no banco de dados.
-   *
-   * @async
-   * @param {(ILote | IImobiliario | IImobiliarioEdificacao | IEdificacao | IPessoa | IImobiliarioPessoa | IVisitas | IMensagens | IMidia)} data - Os dados a serem atualizados ou inseridos.
-   * @param {NomeTabela} table - O nome da tabela onde os dados serão atualizados ou inseridos.
-   * @param {string} fid - O ID do registro a ser atualizado ou inserido.
-   * @returns {Promise<any>} Uma Promise que resolve quando a operação é concluída.
-   */
-  public async upsert(
-    data: { [key: string]: any },
-    table: string,
-    fid: string,
-  ): Promise<any> {
-    console.log(`upserting -> ${fid}@${table}`);
-    const db = await this.connDatabase();
-    await db.open();
-
-    try {
-      let query = `INSERT OR REPLACE INTO data (fid,data,layer,geom) VALUES
-      (${formatFid(fid)},'${JSON.stringify(data)}','${table}','${JSON.stringify(
-        data.geometry,
-      )}');`;
-
-      // console.log(`upserting -> ${query}`)
-      return await db.execute(query);
-    } finally {
-      // await db.close();
-    }
-  }
-
-  public async getDefaults(table: string): Promise<any> {
-    const db = await this.connDatabase();
-    await db.open();
-
-    try {
-      const row = await db.query(
-        `SELECT * FROM data WHERE table = ${table} LIMIT 1`,
-      );
-
-      if (row && row.values && row.values[0]) {
-        var data = JSON.parse(row.values[0].data);
-
-        var newData: any = {};
-        var newRow: any = {};
-
-        for (const key in data) {
-          newData[key] = null;
-        }
-
-        for (const key in row!.values[0]) {
-          newRow[key] = null;
-        }
-
-        return { ...newRow, data: newData };
-      } else {
-        throw new Error(`Nao foi possivel gerar a estrutura para o dado`);
-      }
     } finally {
       // await db.close();
     }

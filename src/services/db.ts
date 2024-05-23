@@ -1,5 +1,6 @@
-import { GeoserverGeoJSON, GeoserverGeoJSONFeature } from "../interfaces";
+import { GeoserverGeoJSONFeature, Layer } from "../interfaces";
 import { db } from "../repositories/db";
+import { convertSldToOl } from "../utils/convertSldToOl";
 
 export async function makeDatabase() {
   try {
@@ -37,13 +38,33 @@ export async function insertFeature(
     `,
       [feature.id, layerName, JSON.stringify(feature)],
     );
+
     console.log("Feature inserted");
   } catch (error) {
     console.error(error);
   }
 }
 
-export async function getLayers(): Promise<GeoserverGeoJSON[]> {
+export async function insertLayer(
+  layer: string,
+  layerStyleSLD: string
+) {
+  try {
+    await db.query(
+      `
+      INSERT INTO layers (layer, style) VALUES ($1, $2) ON CONFLICT (layer) DO UPDATE SET style = $2 WHERE layers.layer = $1;
+    `,
+      [layer, layerStyleSLD],
+    );
+
+    console.log("Layer inserted");
+  } catch (error) {
+    console.error(error);
+  }
+
+}
+
+export async function getLayers(): Promise<Layer[]> {
   try {
     const query = await db.query(`
           SELECT DISTINCT layer FROM data;
@@ -60,6 +81,8 @@ export async function getLayers(): Promise<GeoserverGeoJSON[]> {
         });
 
         return {
+          name: layer.layer,
+          style: await convertSldToOl( await getLayerStyleFromDb(layer.layer) ),
           type: "FeatureCollection",
           features: query.values.map((e: any) => e.data),
         };
@@ -72,13 +95,13 @@ export async function getLayers(): Promise<GeoserverGeoJSON[]> {
   }
 }
 
-export async function getLayerList(): Promise<string[]> {
+export async function getLayerList(): Promise<{ layer: string, style: string, is_visible: boolean}[]> {
   try {
     const query = await db.query(`
-        SELECT DISTINCT layer FROM data;
+        SELECT * FROM layers;
     `);
 
-    return query.values.map((e: any) => e.layer);
+    return query.values
   } catch (error) {
     throw error;
   }
@@ -96,6 +119,18 @@ export async function getLayerFeatures(layer: string) {
     });
 
     return query.values;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getLayerStyleFromDb(layer: string) {
+  try {
+    const query = await db.query(`
+      SELECT style FROM layers WHERE layer = '${layer}';
+    `);
+
+    return query.values[0].style;
   } catch (error) {
     throw error;
   }

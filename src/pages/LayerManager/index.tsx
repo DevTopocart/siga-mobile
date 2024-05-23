@@ -21,8 +21,8 @@ import BackButton from "../../components/BackButton";
 import { useApp } from "../../contexts/AppContext";
 import { useLoading } from "../../hooks/useLoading";
 import { Basemap, FeatureType } from "../../interfaces";
-import { getLayerList, insertFeature } from "../../services/db";
-import { fetchFeatureType, getFeatureTypes } from "../../services/geoserver";
+import { getLayerList, insertFeature, insertLayer } from "../../services/db";
+import { getFeatureType, getFeatureTypes, getLayerStyle } from "../../services/geoserver";
 
 export default function LayerManager() {
   const { basemaps, setBasemaps } = useApp();
@@ -36,8 +36,6 @@ export default function LayerManager() {
   useEffect(() => {
     const state = history.location.state as any;
     if (state?.layer && state.boundingBox) {
-      console.log("🚀 ~ LayerManager ~ boundingBox:", state.boundingBox);
-      console.log("🚀 ~ LayerManager ~ layer:", state.layer);
       downloadLayer(state.layer, state.boundingBox).then(() => {
         history.push("/layers",{});
       });
@@ -51,9 +49,8 @@ export default function LayerManager() {
         try {
           const featureTypes = await getFeatureTypes();
           const localLayers = await getLayerList();
-          console.log("🚀 ~ fetchLayers ~ localLayers:", localLayers);
-          setLocalLayers(localLayers);
-          setOnlineLayers(featureTypes.filter(e => !localLayers.includes(e.name)));
+          setLocalLayers(localLayers.map( e => e.layer));
+          setOnlineLayers(featureTypes.filter(e => !localLayers.map( e => e.layer).includes(e.name)));
         } catch (error) {
           console.error(error);
         } finally {
@@ -83,7 +80,7 @@ export default function LayerManager() {
       const count = 100;
 
       while (true) {
-        const data = await fetchFeatureType(
+        const data = await getFeatureType(
           layer,
           startIndex,
           count,
@@ -112,6 +109,11 @@ export default function LayerManager() {
 
       localLayers ? localLayers.push(layer) : setLocalLayers([layer]);
       onlineLayers?.splice(onlineLayers.map(e => e.name).indexOf(layer), 1);
+
+      const style = await getLayerStyle(layer)
+
+      await insertLayer(layer, style);
+
     } catch (error) {
       console.error("Error while downloading layer", error);
       presentAlert(

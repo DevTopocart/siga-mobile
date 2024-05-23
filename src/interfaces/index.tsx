@@ -1,3 +1,5 @@
+import { Style } from "ol/style";
+
 export interface GeoserverResource {
   name: string;
   href: string;
@@ -137,3 +139,10 @@ export interface Geometry {
   type: string;
   coordinates: number[][][][];
 }
+
+export interface LayerMetadata {
+  name: string;
+  style: Style | Style[];
+}
+
+export type Layer = LayerMetadata & GeoserverGeoJSON

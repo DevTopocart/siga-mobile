@@ -34,7 +34,7 @@ export async function getFeatureTypes(): Promise<FeatureType[]> {
   }
 }
 
-export async function fetchFeatureType(
+export async function getFeatureType(
   layerName: string,
   startIndex: number,
   count: number,
@@ -43,6 +43,14 @@ export async function fetchFeatureType(
   console.log(startIndex, count, bbox);
   const bboxParam = bbox ? `&bbox=${bbox.join(",")},EPSG:3857` : "";
   const url = `/geoserver/Angra/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=Angra:${layerName}&outputFormat=application/json&startIndex=${startIndex}&count=${count}${bboxParam}&srsName=EPSG:4326`;
+  const response = await geoserver(url, "GET");
+  return response.data;
+}
+
+export async function getLayerStyle(
+  layerName: string,
+): Promise<string> {
+  const url = `/geoserver/Angra/ows?request=GetStyles&layers=Angra:${layerName}&service=wms&version=1.1.1`;
   const response = await geoserver(url, "GET");
   return response.data;
 }
