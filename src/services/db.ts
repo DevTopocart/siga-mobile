@@ -1,4 +1,4 @@
-import { GeoserverGeoJSONFeature, Layer } from "../interfaces";
+import { GeoserverGeoJSONFeature, Layer, LayerMetadata } from "../interfaces";
 import { db } from "../repositories/db";
 import { convertSldToOl } from "../utils/convertSldToOl";
 
@@ -67,7 +67,7 @@ export async function insertLayer(
 export async function getLayers(): Promise<Layer[]> {
   try {
     const query = await db.query(`
-          SELECT DISTINCT layer FROM data;
+          SELECT * FROM layers;
       `);
 
     const layers = await Promise.all(
@@ -82,9 +82,10 @@ export async function getLayers(): Promise<Layer[]> {
 
         return {
           name: layer.layer,
-          style: await convertSldToOl( await getLayerStyleFromDb(layer.layer) ),
+          style: await convertSldToOl( layer.style ),
           type: "FeatureCollection",
           features: query.values.map((e: any) => e.data),
+          is_visible: JSON.parse(layer.is_visible),
         };
       }),
     );
@@ -95,13 +96,22 @@ export async function getLayers(): Promise<Layer[]> {
   }
 }
 
-export async function getLayerList(): Promise<{ layer: string, style: string, is_visible: boolean}[]> {
+export async function getLayerList(): Promise<LayerMetadata[]> {
   try {
     const query = await db.query(`
         SELECT * FROM layers;
     `);
 
-    return query.values
+    const result = query.values.map((e: any) => {
+      return {
+        layer: e.layer,
+        style: e.style,
+        is_visible: JSON.parse(e.is_visible),
+      };
+    
+    })
+
+    return result
   } catch (error) {
     throw error;
   }
@@ -131,6 +141,16 @@ export async function getLayerStyleFromDb(layer: string) {
     `);
 
     return query.values[0].style;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function setLayerVisibility(layer: string, visibility: boolean) {
+  try {
+    await db.query(`
+      UPDATE layers SET is_visible = '${visibility}' WHERE layer = '${layer}';
+    `);
   } catch (error) {
     throw error;
   }

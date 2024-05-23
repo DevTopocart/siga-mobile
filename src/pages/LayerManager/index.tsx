@@ -20,8 +20,8 @@ import { useHistory } from "react-router";
 import BackButton from "../../components/BackButton";
 import { useApp } from "../../contexts/AppContext";
 import { useLoading } from "../../hooks/useLoading";
-import { Basemap, FeatureType } from "../../interfaces";
-import { getLayerList, insertFeature, insertLayer } from "../../services/db";
+import { Basemap, FeatureType, LayerMetadata } from "../../interfaces";
+import { getLayerList, insertFeature, insertLayer, setLayerVisibility } from "../../services/db";
 import { getFeatureType, getFeatureTypes, getLayerStyle } from "../../services/geoserver";
 
 export default function LayerManager() {
@@ -29,7 +29,8 @@ export default function LayerManager() {
   const { loading, setLoading } = useLoading();
   const history = useHistory();
   const [onlineLayers, setOnlineLayers] = useState<FeatureType[]>();
-  const [localLayers, setLocalLayers] = useState<string[]>();
+  const [localLayers, setLocalLayers] = useState<LayerMetadata[]>();
+  console.log("🚀 ~ LayerManager ~ localLayers:", localLayers)
 
   const [presentAlert] = useIonAlert();
 
@@ -49,7 +50,7 @@ export default function LayerManager() {
         try {
           const featureTypes = await getFeatureTypes();
           const localLayers = await getLayerList();
-          setLocalLayers(localLayers.map( e => e.layer));
+          setLocalLayers(localLayers);
           setOnlineLayers(featureTypes.filter(e => !localLayers.map( e => e.layer).includes(e.name)));
         } catch (error) {
           console.error(error);
@@ -107,13 +108,11 @@ export default function LayerManager() {
         startIndex += count;
       }
 
-      localLayers ? localLayers.push(layer) : setLocalLayers([layer]);
-      onlineLayers?.splice(onlineLayers.map(e => e.name).indexOf(layer), 1);
-
+      
       const style = await getLayerStyle(layer)
-
+      
       await insertLayer(layer, style);
-
+      remakeLayerList()
     } catch (error) {
       console.error("Error while downloading layer", error);
       presentAlert(
@@ -137,7 +136,31 @@ export default function LayerManager() {
     });
   }
 
-  async function handleVisibilityToggler(layer: any) {}
+  async function handleVisibilityToggler(layer: any) {
+    try {
+      let theLayer = localLayers?.find(e => e.layer === layer.layer);
+      setLayerVisibility(theLayer?.layer!, !theLayer?.is_visible);
+      remakeLayerList()
+    } catch (error) {
+      presentAlert(
+        `Ops! Houve um erro ao alterar a visibilidade da camada: ${JSON.stringify(
+          error,
+        ).slice(0, 1000)}...`,
+      )
+    }
+  }
+
+  async function remakeLayerList() {
+
+    const layers = await getLayerList();
+    setLocalLayers(layers);
+
+    layers.forEach(layer => {
+
+      if (!onlineLayers?.map(e => e.name).includes(layer.layer)) return
+      onlineLayers?.splice(onlineLayers.map(e => e.name).indexOf(layer.layer), 1);
+    })
+  }
 
   async function handleChangeBasemap(newBasemap: string) {
     console.log(newBasemap);
@@ -182,10 +205,10 @@ export default function LayerManager() {
           {localLayers &&
             localLayers.map((layer, index) => (
               <IonItem key={index}>
-                <IonLabel>{layer}</IonLabel>
+                <IonLabel>{layer.layer}</IonLabel>
                 <IonButton
                   fill="clear"
-                  onClick={() => handleDownloadLayer(layer)}
+                  onClick={() => handleDownloadLayer(layer.layer)}
                 >
                   <IonIcon icon={reloadCircle} color="medium" />
                 </IonButton>
@@ -193,7 +216,7 @@ export default function LayerManager() {
                   fill="clear"
                   onClick={() => handleVisibilityToggler(layer)}
                 >
-                  <IonIcon icon={layer ? eye : eyeOff} color="medium" />
+                  <IonIcon icon={layer.is_visible ? eye : eyeOff} color={layer.is_visible ? "success": "medium"} />
                 </IonButton>
               </IonItem>
             ))}

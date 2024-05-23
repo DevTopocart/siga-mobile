@@ -141,8 +141,9 @@ export interface Geometry {
 }
 
 export interface LayerMetadata {
-  name: string;
+  layer: string;
   style: Style | Style[];
+  is_visible: boolean;
 }
 
 export type Layer = LayerMetadata & GeoserverGeoJSON

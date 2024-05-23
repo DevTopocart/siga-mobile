@@ -89,7 +89,8 @@ export default function Map() {
   async function makeLayers() {
     const layers = await getLayers();
     console.log("🚀 ~ makeLayers ~ layers:", layers)
-    setLayers(layers);
+    
+    setLayers(layers.filter((layer) => layer.is_visible));
   }
 
   useEffect(() => {
