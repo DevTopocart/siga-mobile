@@ -87,7 +87,8 @@ export default function LayerManager() {
           bbox,
         );
         if (!data.features || data.features.length === 0) {
-          break;
+          presentAlert("Nenhuma feição foi encontrada nesta área");
+          return;
         }
 
         await Promise.all(
