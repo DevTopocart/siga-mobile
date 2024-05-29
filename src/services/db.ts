@@ -1,4 +1,9 @@
-import { GeoserverGeoJSONFeature, Layer, LayerMetadata } from "../interfaces";
+import {
+  Data,
+  GeoserverGeoJSONFeature,
+  Layer,
+  LayerMetadata,
+} from "../interfaces";
 import { db } from "../repositories/db";
 import { convertSldToOl } from "../utils/convertSldToOl";
 
@@ -46,10 +51,7 @@ export async function insertFeature(
   }
 }
 
-export async function insertLayer(
-  layer: string,
-  layerStyleSLD: string
-) {
+export async function insertLayer(layer: string, layerStyleSLD: string) {
   try {
     await db.query(
       `
@@ -62,7 +64,6 @@ export async function insertLayer(
   } catch (error) {
     console.error(error);
   }
-
 }
 
 export async function getLayers(): Promise<Layer[]> {
@@ -82,8 +83,8 @@ export async function getLayers(): Promise<Layer[]> {
         });
 
         return {
-          name: layer.layer,
-          style: await convertSldToOl( layer.style ),
+          layer: layer.layer,
+          style: await convertSldToOl(layer.style),
           type: "FeatureCollection",
           features: query.values.map((e: any) => e.data),
           is_visible: JSON.parse(layer.is_visible),
@@ -109,16 +110,15 @@ export async function getLayerList(): Promise<LayerMetadata[]> {
         style: e.style,
         is_visible: JSON.parse(e.is_visible),
       };
-    
-    })
+    });
 
-    return result
+    return result;
   } catch (error) {
     throw error;
   }
 }
 
-export async function getLayerFeatures(layer: string) {
+export async function getLayerFeatures(layer: string): Promise<Data[]> {
   try {
     const query = await db.query(`
       SELECT * FROM data WHERE layer = '${layer}';
@@ -152,6 +152,51 @@ export async function setLayerVisibility(layer: string, visibility: boolean) {
     await db.query(`
       UPDATE layers SET is_visible = '${visibility}' WHERE layer = '${layer}';
     `);
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getDefaults(layer: string): Promise<Data> {
+  try {
+    const row = await db.query(
+      `SELECT * FROM data WHERE layer = '${layer}' LIMIT 1`,
+    );
+
+    if (row.values.length === 0) {
+      throw new Error("No default data found");
+    }
+
+    const jsonData = row.values[0];
+
+    jsonData.data = JSON.parse(jsonData.data);
+    console.log("🚀 ~ getDefaults ~ jsonData:", jsonData);
+
+    const cleanedProperties: { [key: string]: any } = {};
+
+    // Iterate over properties keys and set them to null
+    for (const key in jsonData.data.properties) {
+      if (jsonData.data.properties.hasOwnProperty(key)) {
+        cleanedProperties[key] = null;
+      }
+    }
+
+    const fid = jsonData.layer + "." + String(new Date().getTime());
+
+    return {
+      fid: fid,
+      layer: jsonData.layer,
+      data: {
+        type: jsonData.data.type,
+        id: fid,
+        geometry: {
+          type: jsonData.data.geometry.type,
+          coordinates: [],
+        },
+        geometry_name: jsonData.data.geometry_name,
+        properties: cleanedProperties,
+      },
+    };
   } catch (error) {
     throw error;
   }

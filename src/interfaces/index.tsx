@@ -147,3 +147,9 @@ export interface LayerMetadata {
 }
 
 export type Layer = LayerMetadata & GeoserverGeoJSON
+
+export interface Data {
+  fid: string;
+  layer: string;
+  data: GeoserverGeoJSONFeature;
+}

@@ -3,27 +3,45 @@ import { Geolocation } from "@capacitor/geolocation";
 import { Network } from "@capacitor/network";
 import {
   IonButton,
+  IonChip,
   IonContent,
+  IonFab,
   IonFabButton,
+  IonFabList,
   IonHeader,
+  IonIcon,
   useIonActionSheet,
   useIonToast,
 } from "@ionic/react";
+import { home, layersOutline, location, pencil } from "ionicons/icons";
 import { Feature, MapBrowserEvent } from "ol";
 import { Coordinate } from "ol/coordinate";
 import GeoJSON from "ol/format/GeoJSON";
-import { Point, Polygon } from "ol/geom";
+import { Geometry, Point, Polygon } from "ol/geom";
 import { Vector } from "ol/layer";
 import "ol/ol.css";
 import { fromLonLat } from "ol/proj";
 import { useEffect, useRef, useState } from "react";
-import { FiLayers } from "react-icons/fi";
-import { GiHouse, GiPositionMarker } from "react-icons/gi";
+import { CgClose } from "react-icons/cg";
 import { useHistory } from "react-router";
-import { RFeature, RLayerTile, RLayerVector, RMap, RStyle } from "rlayers";
+import {
+  RFeature,
+  RInteraction,
+  RLayerTile,
+  RLayerVector,
+  RMap,
+  RStyle,
+  VectorSourceEvent,
+} from "rlayers";
 import { useApp } from "../../contexts/AppContext";
 import { Layer } from "../../interfaces";
-import { clearData, getLayers, showData } from "../../services/db";
+import {
+  clearData,
+  getDefaults,
+  getLayers,
+  insertFeature,
+  showData,
+} from "../../services/db";
 import {
   BottomButtonsContainer,
   LeftButtonsContainer,
@@ -73,6 +91,8 @@ export default function Map() {
   let map = useRef<RMap>(null);
   const [localization, setLocalization] = useState<Coordinate>();
   const [layers, setLayers] = useState<Layer[]>();
+  const [layerOnEdit, setLayerOnEdit] = useState<string | null>(null);
+  const fabEditorRef = useRef<HTMLIonFabElement>(null);
 
   let isDefaultMapView = true;
 
@@ -82,7 +102,7 @@ export default function Map() {
 
   async function makeLayers() {
     const layers = await getLayers();
-    
+
     setLayers(layers.filter((layer) => layer.is_visible));
   }
 
@@ -95,18 +115,58 @@ export default function Map() {
   function handleMapClick(e: MapBrowserEvent<UIEvent>) {
     if (!map.current) return;
     const features = map.current.ol.getFeaturesAtPixel(e.pixel, {
-      layerFilter: (layer) => layer instanceof Vector,  // Filter only vector layers
-      hitTolerance: 5  // Optional: increases the clickable area around the point
+      layerFilter: (layer) => layer instanceof Vector, // Filter only vector layers
+      hitTolerance: 5, // Optional: increases the clickable area around the point
     });
 
     if (features.length > 0) {
-      console.log("Features found:", features.map(f => {
-        return {
-          fid: f.getId(),
-          properties: f.getProperties()
-        }
-      }));
-    } 
+      console.log(
+        "Features found:",
+        features.map((f) => {
+          return {
+            fid: f.getId(),
+            properties: f.getProperties(),
+          };
+        }),
+      );
+    }
+  }
+
+  function handleAddFeature(e: VectorSourceEvent<Geometry>) {
+    let feature = e.feature;
+
+    if (!feature) return;
+
+    const geometry = feature.getGeometry();
+    getDefaults(layerOnEdit!).then(async (defaults) => {
+      let geom = [];
+      geom.push(
+        new Feature(geometry!.clone().transform("EPSG:3857", "EPSG:4326")),
+      );
+      let writer = new GeoJSON();
+      let geojson = JSON.parse(writer.writeFeatures(geom));
+      console.log(geojson);
+
+      let newFeature = {
+        fid: defaults.fid,
+        layer: defaults.layer,
+        data: {
+          type: defaults.data.type,
+          id: defaults.fid,
+          geometry: geojson.features[0].geometry,
+          geometry_name: defaults.data.geometry_name,
+          properties: defaults.data.properties,
+        },
+      };
+
+      await insertFeature(defaults.layer, newFeature.data);
+
+      history.push("/details", {
+        feature: newFeature,
+      });
+    });
+
+    return;
   }
 
   return (
@@ -131,7 +191,7 @@ export default function Map() {
               history.push("/layers");
             }}
           >
-            <FiLayers size={20} />
+            <IonIcon icon={layersOutline}></IonIcon>
           </IonFabButton>
           <IonFabButton
             size="small"
@@ -140,7 +200,7 @@ export default function Map() {
               setView(initialView);
             }}
           >
-            <GiHouse size={20} />
+            <IonIcon icon={home}></IonIcon>
           </IonFabButton>
           <IonFabButton
             size="small"
@@ -155,9 +215,65 @@ export default function Map() {
               });
             }}
           >
-            <GiPositionMarker size={20} />
+            <IonIcon icon={location}></IonIcon>
           </IonFabButton>
         </RightButtonsContainer>
+      )}
+      {isDefaultMapView && layers && layers?.length !== 0 && (
+        <BottomButtonsContainer>
+          {layerOnEdit && (
+            <IonChip
+              style={{
+                backgroundColor: "var(--ion-color-light-shade)",
+              }}
+            >
+              Editando {layerOnEdit}
+            </IonChip>
+          )}
+          {layerOnEdit && (
+            <IonFabButton size="small" onClick={() => setLayerOnEdit(null)}>
+              <CgClose size={20} onClick={() => setLayerOnEdit(null)} />
+            </IonFabButton>
+          )}
+          {!layerOnEdit && (
+            <IonFab
+              slot="fixed"
+              vertical="bottom"
+              horizontal="end"
+              ref={fabEditorRef}
+            >
+              <IonFabButton size="small" color={"primary"}>
+                <IonIcon icon={pencil}></IonIcon>
+              </IonFabButton>
+              <IonFabList side="top">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    width: "100%",
+                    transform: "translateX(-50%)",
+                  }}
+                >
+                  {layers &&
+                    layers.map((layer, index) => {
+                      return (
+                        <IonButton
+                          fill="solid"
+                          onClick={() => {
+                            setLayerOnEdit(layer.layer);
+                            fabEditorRef.current?.close();
+                          }}
+                        >
+                          {layer.layer}
+                        </IonButton>
+                      );
+                    })}
+                </div>
+              </IonFabList>
+            </IonFab>
+          )}
+        </BottomButtonsContainer>
       )}
       {!isDefaultMapView && (
         <BottomButtonsContainer>
@@ -180,9 +296,7 @@ export default function Map() {
             style={{
               width: "90%",
             }}
-            onClick={() =>
-              history.push("/layers", {})
-            }
+            onClick={() => history.push("/layers", {})}
             color={"danger"}
           >
             Cancelar
@@ -232,11 +346,18 @@ export default function Map() {
                 }).readFeatures(layer) as Feature<Polygon>[]
               }
               style={layer.style}
+              onAddFeature={handleAddFeature}
             >
               <RStyle.RStyle>
                 <RStyle.RStroke color="red" width={1} />
                 <RStyle.RFill color="rgba(20,20,20,0)" />
               </RStyle.RStyle>
+
+              <RInteraction.RDraw
+                // @ts-expect-error
+                type={layer.features[0].geometry.type as string}
+                condition={() => layerOnEdit === layer.layer}
+              />
             </RLayerVector>
           ))}
       </RMap>
