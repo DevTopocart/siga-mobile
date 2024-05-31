@@ -169,6 +169,12 @@ export default function Map() {
     return;
   }
 
+  function handleToggleEdit(layer: string) {
+    setLayerOnEdit(layer);
+    fabEditorRef.current?.close();
+    presentToast("Clique no mapa para adicionar um novo elemento", 2000);
+  }
+
   return (
     <IonContent>
       <IonHeader></IonHeader>
@@ -260,10 +266,7 @@ export default function Map() {
                       return (
                         <IonButton
                           fill="solid"
-                          onClick={() => {
-                            setLayerOnEdit(layer.layer);
-                            fabEditorRef.current?.close();
-                          }}
+                          onClick={() => handleToggleEdit(layer.layer)}
                         >
                           {layer.layer}
                         </IonButton>
