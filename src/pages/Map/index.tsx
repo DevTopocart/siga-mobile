@@ -219,6 +219,7 @@ export default function Map() {
                   position.coords.latitude,
                 ]);
                 setLocalization(newCenter);
+                setView((current) => ({ ...current, center: newCenter }));
               });
             }}
           >
