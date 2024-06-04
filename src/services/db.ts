@@ -201,3 +201,25 @@ export async function getDefaults(layer: string): Promise<Data> {
     throw error;
   }
 }
+
+export async function getFeicao(fid: string) {
+  try {
+    const query = await db.query(`
+      SELECT * FROM data WHERE fid = '${fid}';
+    `);
+
+    return query.values[0].data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function updateFeicao(fid: string, data: GeoserverGeoJSONFeature) {
+  try {
+    await db.query(`
+      UPDATE data SET data = '${JSON.stringify(data)}' WHERE fid = '${fid}';
+    `);
+  } catch (error) {
+    throw error;
+  }
+}
