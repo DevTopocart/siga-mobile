@@ -114,6 +114,8 @@ export default function Map() {
 
   function handleMapClick(e: MapBrowserEvent<UIEvent>) {
     if (!map.current) return;
+
+    if (layerOnEdit) return;
     const features = map.current.ol.getFeaturesAtPixel(e.pixel, {
       layerFilter: (layer) => layer instanceof Vector, // Filter only vector layers
       hitTolerance: 5, // Optional: increases the clickable area around the point
