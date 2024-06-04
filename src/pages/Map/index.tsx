@@ -120,15 +120,14 @@ export default function Map() {
     });
 
     if (features.length > 0) {
-      console.log(
-        "Features found:",
-        features.map((f) => {
-          return {
-            fid: f.getId(),
-            properties: f.getProperties(),
-          };
-        }),
-      );
+      const featuresFound= features.map((f) => {
+        return {
+          fid: f.getId(),
+          properties: f.getProperties(),
+        };
+      })
+      console.log("Features found:", featuresFound);
+      history.push("/list",{features: JSON.stringify(featuresFound)});
     }
   }
 
