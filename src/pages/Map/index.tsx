@@ -30,6 +30,7 @@ import {
   RLayerTile,
   RLayerVector,
   RMap,
+  ROSM,
   RStyle,
   VectorSourceEvent,
 } from "rlayers";
@@ -122,14 +123,14 @@ export default function Map() {
     });
 
     if (features.length > 0) {
-      const featuresFound= features.map((f) => {
+      const featuresFound = features.map((f) => {
         return {
           fid: f.getId(),
           properties: f.getProperties(),
         };
-      })
+      });
       console.log("Features found:", featuresFound);
-      history.push("/list",{features: JSON.stringify(featuresFound)});
+      history.push("/list", { features: JSON.stringify(featuresFound) });
     }
   }
 
@@ -317,6 +318,7 @@ export default function Map() {
         view={[view, setView]}
         onClick={(e) => handleMapClick(e)}
       >
+        <ROSM zIndex={1} />
         <RLayerTile url={basemaps.active.url} zIndex={11} />
 
         {localization && (
