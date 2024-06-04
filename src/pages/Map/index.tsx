@@ -13,7 +13,14 @@ import {
   useIonActionSheet,
   useIonToast,
 } from "@ionic/react";
-import { home, layersOutline, location, pencil } from "ionicons/icons";
+import {
+  addOutline,
+  home,
+  layersOutline,
+  location,
+  pencil,
+  removeOutline,
+} from "ionicons/icons";
 import { Feature, MapBrowserEvent } from "ol";
 import { Coordinate } from "ol/coordinate";
 import GeoJSON from "ol/format/GeoJSON";
@@ -36,13 +43,7 @@ import {
 } from "rlayers";
 import { useApp } from "../../contexts/AppContext";
 import { Layer } from "../../interfaces";
-import {
-  clearData,
-  getDefaults,
-  getLayers,
-  insertFeature,
-  showData,
-} from "../../services/db";
+import { getDefaults, getLayers, insertFeature } from "../../services/db";
 import {
   BottomButtonsContainer,
   LeftButtonsContainer,
@@ -182,24 +183,27 @@ export default function Map() {
       <IonHeader></IonHeader>
       {isDefaultMapView && (
         <LeftButtonsContainer>
-          <IonFabButton size="small" onClick={() => clearData()}>
-            CL
-          </IonFabButton>
-          <IonFabButton size="small" onClick={async () => await showData()}>
-            SW
-          </IonFabButton>
-        </LeftButtonsContainer>
-      )}
-      {isDefaultMapView && (
-        <RightButtonsContainer>
           <IonFabButton
             size="small"
-            color={"primary"}
-            onClick={() => {
-              history.push("/layers");
-            }}
+            onClick={() =>
+              map.current?.ol.getView().animate({
+                zoom: map.current?.ol.getView().getZoom()! + 1,
+                duration: 100,
+              })
+            }
           >
-            <IonIcon icon={layersOutline}></IonIcon>
+            <IonIcon icon={addOutline}> </IonIcon>
+          </IonFabButton>
+          <IonFabButton
+            size="small"
+            onClick={() =>
+              map.current?.ol.getView().animate({
+                zoom: map.current?.ol.getView().getZoom()! - 1,
+                duration: 100,
+              })
+            }
+          >
+            <IonIcon icon={removeOutline}> </IonIcon>
           </IonFabButton>
           <IonFabButton
             size="small"
@@ -225,6 +229,25 @@ export default function Map() {
             }}
           >
             <IonIcon icon={location}></IonIcon>
+          </IonFabButton>
+          {/* <IonFabButton size="small" onClick={() => clearData()}>
+            CL
+          </IonFabButton>
+          <IonFabButton size="small" onClick={async () => await showData()}>
+            SW
+          </IonFabButton> */}
+        </LeftButtonsContainer>
+      )}
+      {isDefaultMapView && (
+        <RightButtonsContainer>
+          <IonFabButton
+            size="small"
+            color={"primary"}
+            onClick={() => {
+              history.push("/layers");
+            }}
+          >
+            <IonIcon icon={layersOutline}></IonIcon>
           </IonFabButton>
         </RightButtonsContainer>
       )}
