@@ -202,13 +202,14 @@ export async function getDefaults(layer: string): Promise<Data> {
   }
 }
 
-export async function getFeicao(fid: string) {
+export async function getFeicao(fid: string): Promise<GeoserverGeoJSONFeature> {
   try {
     const query = await db.query(`
       SELECT * FROM data WHERE fid = '${fid}';
     `);
 
-    return query.values[0].data;
+    const data = JSON.parse(query.values[0].data);
+    return data;
   } catch (error) {
     throw error;
   }

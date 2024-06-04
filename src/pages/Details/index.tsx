@@ -22,7 +22,6 @@ export default function Details() {
 
   async function fetchData() {
     let data = await getFeicao(feature?.fid);
-    data = JSON.parse(data);
     setFeicao(data);
   }
 
