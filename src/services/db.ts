@@ -201,3 +201,35 @@ export async function getDefaults(layer: string): Promise<Data> {
     throw error;
   }
 }
+
+export async function getAsGeojson(table: string) {
+  try {
+    const query = await db.query(
+      `SELECT
+      json_object(
+          'type', 'FeatureCollection',
+          'features', json_group_array(
+              json_object(
+                  'type', 'Feature',
+                  'geometry', json_extract(data, '$.geometry'),
+                  'properties', json_extract(data, '$.properties')
+              )
+          )
+      ) AS geojson_collection
+  FROM
+      data
+  WHERE
+      layer = '${table}';`,
+    );
+
+    if (query.values && query.values.length > 0) {
+      const parsedGeojson = JSON.parse(query.values[0].geojson_collection);
+      return parsedGeojson;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error(error);
+    throw new Error(`Erro ao consultar dados GeoJSON na tabela ${table}.`);
+  }
+}
