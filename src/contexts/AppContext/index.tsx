@@ -4,10 +4,18 @@ import { basemaps as possibleBasemaps } from "../../basemaps";
 import { Basemaps } from "../../interfaces";
 
 interface IAppContext {
-  [key: string]: any;
   basemaps: Basemaps;
   setBasemaps: React.Dispatch<SetStateAction<Basemaps>>;
+  view: RView;
+  setView: React.Dispatch<SetStateAction<RView>>;
+  initialView: RView;
 }
+
+const initialView = {
+  center: [-4932263.369981612, -2631855.098882083],
+  zoom: 15.86196947686721,
+  resolution: 2.6284828255507837,
+};
 
 export const AppContext = createContext<IAppContext>({
   basemaps: {
@@ -15,6 +23,9 @@ export const AppContext = createContext<IAppContext>({
     basemaps: possibleBasemaps,
   },
   setBasemaps: () => {},
+  view: initialView,
+  setView: () => {},
+  initialView,
 });
 
 export function AppProvider({ children }: any) {
@@ -23,12 +34,6 @@ export function AppProvider({ children }: any) {
     basemaps: possibleBasemaps,
   });
 
-  
-  const initialView = {
-    center: [-4932263.369981612, -2631855.098882083],
-    zoom: 15.86196947686721,
-    resolution: 2.6284828255507837,
-  };
   const [view, setView] = useState<RView>(initialView);
 
   return (
@@ -38,7 +43,7 @@ export function AppProvider({ children }: any) {
         setBasemaps,
         view,
         setView,
-        initialView
+        initialView,
       }}
     >
       {children}

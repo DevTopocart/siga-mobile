@@ -13,7 +13,14 @@ import {
   useIonActionSheet,
   useIonToast,
 } from "@ionic/react";
-import { home, layersOutline, location, pencil } from "ionicons/icons";
+import {
+  addOutline,
+  home,
+  layersOutline,
+  location,
+  pencil,
+  removeOutline,
+} from "ionicons/icons";
 import { Feature, MapBrowserEvent } from "ol";
 import { Coordinate } from "ol/coordinate";
 import GeoJSON from "ol/format/GeoJSON";
@@ -30,19 +37,14 @@ import {
   RLayerTile,
   RLayerVector,
   RMap,
+  ROSM,
   RStyle,
   VectorSourceEvent,
 } from "rlayers";
 import SaveAndShare from "../../components/SaveAndShare";
 import { useApp } from "../../contexts/AppContext";
 import { Layer } from "../../interfaces";
-import {
-  clearData,
-  getDefaults,
-  getLayers,
-  insertFeature,
-  showData,
-} from "../../services/db";
+import { getDefaults, getLayers, insertFeature } from "../../services/db";
 import {
   BottomButtonsContainer,
   LeftButtonsContainer,
@@ -115,21 +117,22 @@ export default function Map() {
 
   function handleMapClick(e: MapBrowserEvent<UIEvent>) {
     if (!map.current) return;
+
+    if (layerOnEdit) return;
     const features = map.current.ol.getFeaturesAtPixel(e.pixel, {
       layerFilter: (layer) => layer instanceof Vector, // Filter only vector layers
       hitTolerance: 5, // Optional: increases the clickable area around the point
     });
 
     if (features.length > 0) {
-      console.log(
-        "Features found:",
-        features.map((f) => {
-          return {
-            fid: f.getId(),
-            properties: f.getProperties(),
-          };
-        }),
-      );
+      const featuresFound = features.map((f) => {
+        return {
+          fid: f.getId(),
+          properties: f.getProperties(),
+        };
+      });
+      console.log("Features found:", featuresFound);
+      history.push("/list", { features: JSON.stringify(featuresFound) });
     }
   }
 
@@ -170,29 +173,38 @@ export default function Map() {
     return;
   }
 
+  function handleToggleEdit(layer: string) {
+    setLayerOnEdit(layer);
+    fabEditorRef.current?.close();
+    presentToast("Clique no mapa para adicionar um novo elemento", 2000);
+  }
+
   return (
     <IonContent>
       <IonHeader></IonHeader>
       {isDefaultMapView && (
         <LeftButtonsContainer>
-          <IonFabButton size="small" onClick={() => clearData()}>
-            CL
-          </IonFabButton>
-          <IonFabButton size="small" onClick={async () => await showData()}>
-            SW
-          </IonFabButton>
-        </LeftButtonsContainer>
-      )}
-      {isDefaultMapView && (
-        <RightButtonsContainer>
           <IonFabButton
             size="small"
-            color={"primary"}
-            onClick={() => {
-              history.push("/layers");
-            }}
+            onClick={() =>
+              map.current?.ol.getView().animate({
+                zoom: map.current?.ol.getView().getZoom()! + 1,
+                duration: 100,
+              })
+            }
           >
-            <IonIcon icon={layersOutline}></IonIcon>
+            <IonIcon icon={addOutline}> </IonIcon>
+          </IonFabButton>
+          <IonFabButton
+            size="small"
+            onClick={() =>
+              map.current?.ol.getView().animate({
+                zoom: map.current?.ol.getView().getZoom()! - 1,
+                duration: 100,
+              })
+            }
+          >
+            <IonIcon icon={removeOutline}> </IonIcon>
           </IonFabButton>
           <IonFabButton
             size="small"
@@ -213,13 +225,32 @@ export default function Map() {
                   position.coords.latitude,
                 ]);
                 setLocalization(newCenter);
+                setView((current) => ({ ...current, center: newCenter }));
               });
             }}
           >
             <IonIcon icon={location}></IonIcon>
           </IonFabButton>
-
           <SaveAndShare />
+          {/* <IonFabButton size="small" onClick={() => clearData()}>
+            CL
+          </IonFabButton>
+          <IonFabButton size="small" onClick={async () => await showData()}>
+            SW
+          </IonFabButton> */}
+        </LeftButtonsContainer>
+      )}
+      {isDefaultMapView && (
+        <RightButtonsContainer>
+          <IonFabButton
+            size="small"
+            color={"primary"}
+            onClick={() => {
+              history.push("/layers");
+            }}
+          >
+            <IonIcon icon={layersOutline}></IonIcon>
+          </IonFabButton>
         </RightButtonsContainer>
       )}
       {isDefaultMapView && layers && layers?.length !== 0 && (
@@ -263,10 +294,7 @@ export default function Map() {
                       return (
                         <IonButton
                           fill="solid"
-                          onClick={() => {
-                            setLayerOnEdit(layer.layer);
-                            fabEditorRef.current?.close();
-                          }}
+                          onClick={() => handleToggleEdit(layer.layer)}
                         >
                           {layer.layer}
                         </IonButton>
@@ -315,6 +343,7 @@ export default function Map() {
         view={[view, setView]}
         onClick={(e) => handleMapClick(e)}
       >
+        <ROSM zIndex={1} />
         <RLayerTile url={basemaps.active.url} zIndex={11} />
 
         {localization && (

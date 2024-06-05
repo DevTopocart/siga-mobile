@@ -14,15 +14,30 @@ import {
   IonTitle,
   useIonAlert,
 } from "@ionic/react";
-import { downloadOutline, eye, eyeOff, reloadCircle } from "ionicons/icons";
+import {
+  addOutline,
+  downloadOutline,
+  eye,
+  eyeOff,
+  layersOutline,
+} from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router";
 import BackButton from "../../components/BackButton";
 import { useApp } from "../../contexts/AppContext";
 import { useLoading } from "../../hooks/useLoading";
 import { Basemap, FeatureType, LayerMetadata } from "../../interfaces";
-import { getLayerList, insertFeature, insertLayer, setLayerVisibility } from "../../services/db";
-import { getFeatureType, getFeatureTypes, getLayerStyle } from "../../services/geoserver";
+import {
+  getLayerList,
+  insertFeature,
+  insertLayer,
+  setLayerVisibility,
+} from "../../services/db";
+import {
+  getFeatureType,
+  getFeatureTypes,
+  getLayerStyle,
+} from "../../services/geoserver";
 
 export default function LayerManager() {
   const { basemaps, setBasemaps } = useApp();
@@ -37,35 +52,39 @@ export default function LayerManager() {
     const state = history.location.state as any;
     if (state?.layer && state.boundingBox) {
       downloadLayer(state.layer, state.boundingBox).then(() => {
-        history.push("/layers",{});
+        history.push("/layers", {});
       });
     } else {
       async function fetchLayers() {
         setLoading({
           loading: true,
           message: "Buscando camadas disponíveis",
-          progress: 0
+          progress: 0,
         });
         try {
           const featureTypes = await getFeatureTypes();
           const localLayers = await getLayerList();
           setLocalLayers(localLayers);
-          setOnlineLayers(featureTypes.filter(e => !localLayers.map( e => e.layer).includes(e.name)));
+          setOnlineLayers(
+            featureTypes.filter(
+              (e) => !localLayers.map((e) => e.layer).includes(e.name),
+            ),
+          );
         } catch (error) {
           console.error(error);
         } finally {
           setLoading({
             loading: false,
             message: "",
-            progress: 0
+            progress: 0,
           });
         }
       }
-  
+
       fetchLayers();
     }
   }, [history.location.state]);
-  
+
   async function downloadLayer(
     layer: string,
     bbox: [number, number, number, number],
@@ -80,12 +99,7 @@ export default function LayerManager() {
       const count = 100;
 
       while (true) {
-        const data = await getFeatureType(
-          layer,
-          startIndex,
-          count,
-          bbox,
-        );
+        const data = await getFeatureType(layer, startIndex, count, bbox);
         if (!data.features || data.features.length === 0) {
           presentAlert("Nenhuma feição foi encontrada nesta área");
           return;
@@ -108,11 +122,10 @@ export default function LayerManager() {
         startIndex += count;
       }
 
-      
-      const style = await getLayerStyle(layer)
-      
+      const style = await getLayerStyle(layer);
+
       await insertLayer(layer, style);
-      remakeLayerList()
+      remakeLayerList();
     } catch (error) {
       console.error("Error while downloading layer", error);
       presentAlert(
@@ -138,28 +151,29 @@ export default function LayerManager() {
 
   async function handleVisibilityToggler(layer: any) {
     try {
-      let theLayer = localLayers?.find(e => e.layer === layer.layer);
+      let theLayer = localLayers?.find((e) => e.layer === layer.layer);
       setLayerVisibility(theLayer?.layer!, !theLayer?.is_visible);
-      remakeLayerList()
+      remakeLayerList();
     } catch (error) {
       presentAlert(
         `Ops! Houve um erro ao alterar a visibilidade da camada: ${JSON.stringify(
           error,
         ).slice(0, 1000)}...`,
-      )
+      );
     }
   }
 
   async function remakeLayerList() {
-
     const layers = await getLayerList();
     setLocalLayers(layers);
 
-    layers.forEach(layer => {
-
-      if (!onlineLayers?.map(e => e.name).includes(layer.layer)) return
-      onlineLayers?.splice(onlineLayers.map(e => e.name).indexOf(layer.layer), 1);
-    })
+    layers.forEach((layer) => {
+      if (!onlineLayers?.map((e) => e.name).includes(layer.layer)) return;
+      onlineLayers?.splice(
+        onlineLayers.map((e) => e.name).indexOf(layer.layer),
+        1,
+      );
+    });
   }
 
   async function handleChangeBasemap(newBasemap: string) {
@@ -208,13 +222,17 @@ export default function LayerManager() {
                   fill="clear"
                   onClick={() => handleDownloadLayer(layer.layer)}
                 >
-                  <IonIcon icon={reloadCircle} color="medium" />
+                  <IonIcon icon={addOutline} color="medium" />
+                  <IonIcon icon={layersOutline} color="medium" />
                 </IonButton>
                 <IonButton
                   fill="clear"
                   onClick={() => handleVisibilityToggler(layer)}
                 >
-                  <IonIcon icon={layer.is_visible ? eye : eyeOff} color={layer.is_visible ? "success": "medium"} />
+                  <IonIcon
+                    icon={layer.is_visible ? eye : eyeOff}
+                    color={layer.is_visible ? "success" : "medium"}
+                  />
                 </IonButton>
               </IonItem>
             ))}
