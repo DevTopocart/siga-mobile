@@ -231,7 +231,6 @@ export default function Map() {
           >
             <IonIcon icon={location}></IonIcon>
           </IonFabButton>
-          <SaveAndShare />
           {/* <IonFabButton size="small" onClick={() => clearData()}>
             CL
           </IonFabButton>
@@ -251,6 +250,7 @@ export default function Map() {
           >
             <IonIcon icon={layersOutline}></IonIcon>
           </IonFabButton>
+          <SaveAndShare />
         </RightButtonsContainer>
       )}
       {isDefaultMapView && layers && layers?.length !== 0 && (
