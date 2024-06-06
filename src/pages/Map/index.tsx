@@ -41,6 +41,7 @@ import {
   RStyle,
   VectorSourceEvent,
 } from "rlayers";
+import SaveAndShare from "../../components/SaveAndShare";
 import { useApp } from "../../contexts/AppContext";
 import { Layer } from "../../interfaces";
 import { getDefaults, getLayers, insertFeature } from "../../services/db";
@@ -249,6 +250,7 @@ export default function Map() {
           >
             <IonIcon icon={layersOutline}></IonIcon>
           </IonFabButton>
+          <SaveAndShare />
         </RightButtonsContainer>
       )}
       {isDefaultMapView && layers && layers?.length !== 0 && (
