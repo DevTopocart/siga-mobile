@@ -53,7 +53,9 @@ jobs:
           
           - name: Generate the Android App Bundle
             working-directory: ./android/
-            run: ./gradlew assembleDebug
+            run: |
+              chmod +x gradlew  
+              ./gradlew assembleDebug
 
           - name: rename apk
             run: |
