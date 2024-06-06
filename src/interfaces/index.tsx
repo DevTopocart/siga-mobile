@@ -5,6 +5,10 @@ export interface GeoserverResource {
   href: string;
 }
 
+export interface Features {
+  fid: string;
+  properties: { [key: string]: any };
+}
 export type FeatureTypeApp = FeatureType & FeatureTypeAppProps;
 
 export interface FeatureTypeAppProps {

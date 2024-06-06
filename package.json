@@ -1,7 +1,7 @@
 {
   "name": "siga-mobile",
   "version": "1.0.0",
-  "description": "Aplicativo Mobile para o SIG de Angra dos Reis, desenvolvido em Ionic 7, React e Typescript",
+  "description": "Aplicativo Mobile para o SIGA de Angra dos Reis, desenvolvido em Ionic 7, React e Typescript",
   "scripts": {
     "start": "ionic cap run android --l --external --open",
     "sync": "ionic cap sync android",
