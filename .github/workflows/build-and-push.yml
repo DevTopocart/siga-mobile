@@ -1,0 +1,71 @@
+name: "Build and push"
+
+on:
+    workflow_call:
+        inputs:
+            app-name:
+                required: false
+                type: string
+                default: siga-mobile
+            version:
+                required: false
+                type: string
+        secrets:
+            AWS_KEY_ID:
+            AWS_SECRET_ACCESS_KEY:
+            AWS_BUCKET_NAME:
+            
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Copy data
+            uses: actions/checkout@v2
+
+          - name: update package.json version
+            run: |
+              contents="$(jq '.version = "${{inputs.version}}"' package.json)" && \
+              echo -E "${contents}" > package.json
+
+          - name: Setup node
+            uses: actions/setup-node@v1
+            with:
+                node-version: 18.x
+          
+          - name: Setup java
+            uses: actions/setup-java@v1
+            with:
+              java-version: 17
+          
+          - name: Install Ionic
+            run: npm install -g @ionic/cli
+      
+          - name: Install  dependencies
+            run: npm install --force
+    
+          - name: Copy Android
+            run: ionic capacitor copy android
+          
+          - name: build
+            run: |
+              ionic capacitor build android 
+          
+          - name: Generate the Android App Bundle
+            working-directory: ./android/
+            run: ./gradlew assembleDebug
+
+          - name: rename apk
+            run: |
+              cp ./android/app/build/outputs/apk/debug/app-debug.apk ./android/app/build/outputs/apk/debug/${{inputs.app-name}}-${{inputs.version}}.apk
+              cp ./android/app/build/outputs/apk/debug/app-debug.apk ./android/app/build/outputs/apk/debug/${{inputs.app-name}}-latest.apk
+    
+          - uses: shallwefootball/s3-upload-action@master
+            name: Upload S3
+            id: S3
+            with:
+              aws_key_id: ${{ secrets.AWS_KEY_ID }}
+              aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+              aws_bucket: ${{ secrets.AWS_BUCKET_NAME }}
+              destination_dir: 'app'
+              source_dir: './android/app/build/outputs/apk/debug'

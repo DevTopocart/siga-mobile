@@ -1,0 +1,47 @@
+name: "Build and delivery"
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+      - pipeline
+
+jobs:
+  make-release:
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.release_version.outputs.version }}
+    steps:
+      - name: Copy data
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2.1.5
+        with:
+          node-version: '20'
+      
+      - name: Semantic Release
+        run: |
+          if [ ${{ github.ref }} == 'refs/heads/staging' ]; then
+            npm install @semantic-release/git @semantic-release/github
+            npx semantic-release
+          fi
+        env:
+          GH_TOKEN : ${{ secrets.GH_TOKEN }}
+      
+      - id: release_version
+        run: |
+          echo "VERSION=$(cat package.json | jq -r '.version')" >> $GITHUB_OUTPUT
+
+  build-and-push-apk:
+    needs: make-release
+    uses: ./.github/workflows/build-and-push.yml
+    with:
+      app-name: "siga-mobile"
+      version: ${{ needs.make-release.outputs.VERSION }}
+    secrets:
+      AWS_KEY_ID: ${{secrets.AWS_KEY_ID}}
+      AWS_BUCKET_NAME:  "topocart"
+      AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+
