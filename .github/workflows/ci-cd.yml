@@ -3,7 +3,6 @@ name: "Build and delivery"
 on:
   push:
     branches:
-      - staging
       - main
       - pipeline
 
@@ -23,7 +22,7 @@ jobs:
       
       - name: Semantic Release
         run: |
-          if [ ${{ github.ref }} == 'refs/heads/staging' ]; then
+          if [ ${{ github.ref }} == 'refs/heads/main' ]; then
             npm install @semantic-release/git @semantic-release/github
             npx semantic-release
           fi
