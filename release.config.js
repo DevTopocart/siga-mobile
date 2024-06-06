@@ -1,6 +1,6 @@
 module.exports = {
-  branches: ["staging"],
-  repositoryUrl: "https://github.com/etopocart/siga-mobile-next",
+  branches: ["main"],
+  repositoryUrl: "https://github.com/DevTopocart/siga-mobile",
   plugins: [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
