@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "siga-mobile",
   webDir: "dist",
   server: {
-    androidScheme: "https",
+    androidScheme: "http",
   },
   loggingBehavior: "none",
 };

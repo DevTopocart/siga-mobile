@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">siga-mobile</string>
-    <string name="title_activity_main">siga-mobile</string>
+    <string name="app_name">SIGA Mobile</string>
+    <string name="title_activity_main">SIGA Mobile</string>
     <string name="package_name">com.topocart.siga.mobile</string>
     <string name="custom_url_scheme">com.topocart.siga.mobile</string>
 </resources>
