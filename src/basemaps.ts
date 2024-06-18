@@ -21,7 +21,7 @@ export const basemaps = [
   },
   {
     name: "OpenStreetMap",
-    url: "https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    url: "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
   },
   {
     name: "Google Satellite",

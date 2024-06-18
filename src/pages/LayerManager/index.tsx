@@ -11,6 +11,7 @@ import {
   IonProgressBar,
   IonRadio,
   IonRadioGroup,
+  IonText,
   IonTitle,
   useIonAlert,
 } from "@ionic/react";
@@ -20,6 +21,7 @@ import {
   eye,
   eyeOff,
   layersOutline,
+  download,
 } from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router";
@@ -31,6 +33,7 @@ import {
   getLayerList,
   insertFeature,
   insertLayer,
+  postActiveBasemap,
   setLayerVisibility,
 } from "../../services/db";
 import {
@@ -38,9 +41,13 @@ import {
   getFeatureTypes,
   getLayerStyle,
 } from "../../services/geoserver";
+import { getTMSTiles } from "../../utils/mercatorToTileXY";
+import { useTilesDevice } from "../../hooks/useTilesDevice";
+import { Network } from "@capacitor/network";
 
 export default function LayerManager() {
   const { basemaps, setBasemaps } = useApp();
+
   const { loading, setLoading } = useLoading();
   const history = useHistory();
   const [onlineLayers, setOnlineLayers] = useState<FeatureType[]>();
@@ -48,9 +55,30 @@ export default function LayerManager() {
 
   const [presentAlert] = useIonAlert();
 
+  const tilesDevice = useTilesDevice();
+
+  async function fetchOrtofotos(state: any) {
+    setLoading({
+      loading: true,
+      message: "Baixando ortofotos",
+      progress: 0,
+    });
+    await downloadOrtofotos(state);
+    setLoading({
+      loading: false,
+      message: "Ortofotos baixadas com sucesso",
+      progress: 100,
+    });
+  }
+
   useEffect(() => {
     const state = history.location.state as any;
-    if (state?.layer && state.boundingBox) {
+
+    if (state?.url) {
+      fetchOrtofotos(state);
+
+      return;
+    } else if (state?.layer && state.boundingBox && !state.url) {
       downloadLayer(state.layer, state.boundingBox).then(() => {
         history.push("/layers", {});
       });
@@ -84,6 +112,24 @@ export default function LayerManager() {
       fetchLayers();
     }
   }, [history.location.state]);
+
+  async function downloadOrtofotos(state: any) {
+    await tilesDevice.fetchTilesFromLote(
+      [
+        {
+          url: state.url,
+          extensao: "png",
+          name: state.name,
+        },
+      ],
+      getTMSTiles({
+        minX: state.boundingBox[0],
+        minY: state.boundingBox[1],
+        maxX: state.boundingBox[2],
+        maxY: state.boundingBox[3],
+      }),
+    );
+  }
 
   async function downloadLayer(
     layer: string,
@@ -149,6 +195,13 @@ export default function LayerManager() {
     });
   }
 
+  async function handleDownloadOrtofoto(item: any) {
+    history.push(`/map`, {
+      url: item.url,
+      name: item.name,
+    });
+  }
+
   async function handleVisibilityToggler(layer: any) {
     try {
       let theLayer = localLayers?.find((e) => e.layer === layer.layer);
@@ -180,10 +233,31 @@ export default function LayerManager() {
     const theBasemap = basemaps.basemaps.find(
       (basemap) => basemap.name === newBasemap,
     ) as Basemap;
+
+    await postActiveBasemap(newBasemap, "activeBasemap");
+
     setBasemaps({
       active: theBasemap,
       basemaps: basemaps.basemaps,
     });
+  }
+
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const listener = Network.addListener("networkStatusChange", (status) => {
+      setIsConnected(status.connected);
+    });
+
+    Network.getStatus().then((status) => setIsConnected(status.connected));
+
+    return () => {
+      listener.remove();
+    };
+  }, []);
+
+  function ortofotoOffline(item: string) {
+    return tilesDevice.files.find((file: string) => file === item);
   }
 
   return (
@@ -262,17 +336,47 @@ export default function LayerManager() {
           </IonListHeader>
           <IonRadioGroup
             value={basemaps.active.name}
-            // @ts-expect-error
-            compareWith={(o1: Basemap, o2: Basemap) => {
-              return o1.name === o2.name;
-            }}
+            // compareWith={(o1: Basemap, o2: Basemap) => {
+            //   return o1.name === o2.name;
+            // }}
             onIonChange={(ev) => handleChangeBasemap(ev.detail.value)}
           >
             {basemaps.basemaps.map((basemap, index) => (
               <IonItem key={index}>
-                <IonRadio key={basemap.name} value={basemap.name}>
-                  {basemap.name}
-                </IonRadio>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
+                  <IonText>
+                    {basemap.name}
+
+                    <span
+                      style={{
+                        fontSize: "10px",
+                      }}
+                    >
+                      {ortofotoOffline(basemap.name) && " (disponível offline)"}
+                    </span>
+                  </IonText>
+
+                  {isConnected && (
+                    <IonButton
+                      fill="clear"
+                      onClick={() => handleDownloadOrtofoto(basemap)}
+                    >
+                      <IonIcon icon={download} color="medium" />
+                    </IonButton>
+                  )}
+                </div>
+                <IonRadio
+                  disabled={!ortofotoOffline(basemap.name) && !isConnected}
+                  key={basemap.name}
+                  value={basemap.name}
+                  style={{ width: "10%" }}
+                ></IonRadio>
               </IonItem>
             ))}
           </IonRadioGroup>
