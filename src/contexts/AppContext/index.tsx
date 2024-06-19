@@ -12,9 +12,9 @@ interface IAppContext {
 }
 
 const initialView = {
-  center: [-4932263.369981612, -2631855.098882083],
-  zoom: 15.86196947686721,
-  resolution: 2.6284828255507837,
+  center: [-4934929.413443648, -2631375.9023324954],
+  zoom: 12.710964087864543,
+  resolution: 23.348139651704077,
 };
 
 export const AppContext = createContext<IAppContext>({

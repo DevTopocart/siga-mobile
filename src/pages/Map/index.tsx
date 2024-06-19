@@ -15,6 +15,7 @@ import {
 } from "@ionic/react";
 import {
   addOutline,
+  help,
   home,
   layersOutline,
   location,
@@ -302,6 +303,21 @@ export default function Map() {
                     })}
                 </div>
               </IonFabList>
+            </IonFab>
+          )}
+          {!layerOnEdit && (
+            <IonFab slot="fixed" vertical="bottom" horizontal="start">
+              <IonFabButton size="small" color={"primary"}>
+                <IonIcon
+                  icon={help}
+                  onClick={() =>
+                    window.open(
+                      "https://docs.topocart.dev.br/projetos/angradosreis/manualsigamobile",
+                      "_blank",
+                    )
+                  }
+                ></IonIcon>
+              </IonFabButton>
             </IonFab>
           )}
         </BottomButtonsContainer>
