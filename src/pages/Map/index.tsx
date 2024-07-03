@@ -15,6 +15,7 @@ import {
 } from "@ionic/react";
 import {
   addOutline,
+  help,
   home,
   layersOutline,
   location,
@@ -43,6 +44,7 @@ import {
 } from "rlayers";
 import SaveAndShare from "../../components/SaveAndShare";
 import { useApp } from "../../contexts/AppContext";
+import { useTilesDevice } from "../../hooks/useTilesDevice";
 import { Layer } from "../../interfaces";
 import { getDefaults, getLayers, insertFeature } from "../../services/db";
 import {
@@ -56,10 +58,11 @@ export default function Map() {
   const history = useHistory();
 
   /* App hooks and states */
-  const { basemaps, view, setView, initialView } = useApp();
+  const { basemaps, view, setView, initialView, setBasemaps } = useApp();
 
   /* Connection hooks and states */
   const [isConnected, setIsConnected] = useState(false);
+
   useEffect(() => {
     const listener = Network.addListener("networkStatusChange", (status) => {
       setIsConnected(status.connected);
@@ -149,7 +152,6 @@ export default function Map() {
       );
       let writer = new GeoJSON();
       let geojson = JSON.parse(writer.writeFeatures(geom));
-      console.log(geojson);
 
       let newFeature = {
         fid: defaults.fid,
@@ -178,6 +180,14 @@ export default function Map() {
     fabEditorRef.current?.close();
     presentToast("Clique no mapa para adicionar um novo elemento", 2000);
   }
+
+  const tilesDevice = useTilesDevice();
+
+  useEffect(() => {
+    if (map.current?.ol && !isConnected) {
+      tilesDevice.loadTilesFromDevice(map, basemaps.active.name);
+    }
+  }, [map.current]);
 
   return (
     <IonContent>
@@ -304,6 +314,21 @@ export default function Map() {
               </IonFabList>
             </IonFab>
           )}
+          {!layerOnEdit && (
+            <IonFab slot="fixed" vertical="bottom" horizontal="start">
+              <IonFabButton size="small" color={"primary"}>
+                <IonIcon
+                  icon={help}
+                  onClick={() =>
+                    window.open(
+                      "https://docs.topocart.dev.br/projetos/angradosreis/manualsigamobile",
+                      "_blank",
+                    )
+                  }
+                ></IonIcon>
+              </IonFabButton>
+            </IonFab>
+          )}
         </BottomButtonsContainer>
       )}
       {!isDefaultMapView && (
@@ -312,14 +337,14 @@ export default function Map() {
             style={{
               width: "90%",
             }}
-            onClick={() =>
+            onClick={() => {
               history.push("/layers", {
                 ...(history.location.state as any),
                 boundingBox: map.current?.ol
                   .getView()
                   .calculateExtent(map.current?.ol.getSize()),
-              })
-            }
+              });
+            }}
           >
             OK
           </IonButton>

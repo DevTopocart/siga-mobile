@@ -54,7 +54,13 @@ export class DatabaseService {
         style TEXT,
         is_visible BOOLEAN DEFAULT TRUE,
         UNIQUE (layer)
-      );`)
+      );`);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS proj_defs (
+        key TEXT,
+        data TEXT
+      );`);
   }
 
   public async query(sql: string, params?: any[]): Promise<any> {
