@@ -293,7 +293,6 @@ export async function getActiveBasemap(key: string) {
       return undefined;
     }
   } catch (error) {
-    console.log(error);
     return undefined;
   }
 }

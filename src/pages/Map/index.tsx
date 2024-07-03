@@ -43,20 +43,15 @@ import {
 } from "rlayers";
 import SaveAndShare from "../../components/SaveAndShare";
 import { useApp } from "../../contexts/AppContext";
+import { useTilesDevice } from "../../hooks/useTilesDevice";
 import { Layer } from "../../interfaces";
-import {
-  getDefaults,
-  getLayers,
-  insertFeature,
-  showData,
-} from "../../services/db";
+import { getDefaults, getLayers, insertFeature } from "../../services/db";
 import {
   BottomButtonsContainer,
   LeftButtonsContainer,
   RightButtonsContainer,
 } from "./styles";
 import "./styles.css";
-import { useTilesDevice } from "../../hooks/useTilesDevice";
 
 export default function Map() {
   const history = useHistory();

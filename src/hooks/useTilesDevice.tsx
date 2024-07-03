@@ -1,13 +1,56 @@
 import { Photo } from "@capacitor/camera";
-import { Capacitor, CapacitorHttp, HttpResponse } from "@capacitor/core";
+import { CapacitorHttp, HttpResponse } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import TileLayer from "ol/layer/Tile";
 import { XYZ } from "ol/source";
 import { RefObject, useEffect, useState } from "react";
 import { RMap } from "rlayers";
+import { useLoading } from "./useLoading";
 
-export function useTilesDevice(): any {
-  const diretorioTiles = "diretorio_tiles";
+interface BaseMap {
+  url: string;
+  extensao: string;
+  name: string;
+}
+
+interface Position {
+  x: number;
+  y: number;
+  z: number;
+  "-y"?: number;
+}
+
+interface FetchTileOptions {
+  url: string;
+  x: number;
+  y: number;
+  z: number;
+  extensao: string;
+  name: string;
+}
+
+interface UseTilesDevice {
+  fetchTilesFromLote: (
+    baseMaps: BaseMap[],
+    positions: Position[],
+  ) => Promise<void>;
+  loadTilesFromDevice: (
+    map: RefObject<RMap>,
+    filePath: string,
+  ) => Promise<void>;
+  files: string[];
+  loading: { loading: boolean; message: string; progress: number };
+  setLoading: (loading: {
+    loading: boolean;
+    message: string;
+    progress: number;
+  }) => void;
+}
+
+export function useTilesDevice(): UseTilesDevice {
+  const { setLoading, loading } = useLoading();
+
+  const diretorioTiles = "SIGA/diretorio_tiles";
 
   async function base64FromPath(path: string): Promise<string> {
     const response = await fetch(path);
@@ -26,7 +69,10 @@ export function useTilesDevice(): any {
     });
   }
 
-  async function savePicture(photo: Photo, fileName: string): Promise<any> {
+  async function savePicture(
+    photo: Photo,
+    fileName: string,
+  ): Promise<{ filepath: string; webviewPath?: string }> {
     const base64Data = await base64FromPath(photo.webPath!);
     await Filesystem.writeFile({
       path: fileName,
@@ -56,24 +102,40 @@ export function useTilesDevice(): any {
     });
   }
 
-  async function fetchTilesFromLote(baseMaps: any[], positions: any[]) {
+  async function fetchTilesFromLote(
+    baseMaps: BaseMap[],
+    positions: Position[],
+  ): Promise<void> {
     if (!baseMaps) return;
 
     const endPoint = baseMaps[0].url;
     const extensao = baseMaps[0].extensao;
     const name = baseMaps[0].name;
 
-    for await (const position of positions) {
+    setLoading({
+      loading: true,
+      message: `Iniciando o download de tiles...`,
+      progress: 0,
+    });
+
+    for (const [index, position] of positions.entries()) {
       console.log(
         `Baixando tile ${position.z}/${position.x}/${position.y}.${extensao}`,
       );
+
+      setLoading({
+        loading: true,
+        message: `Baixando ${index + 1} de ${positions.length}`,
+        progress: (index + 1) / positions.length,
+      });
+
       try {
         await fetchTileCapacitor(
           endPoint
-            .replace("{z}", position.z)
-            .replace("{x}", position.x)
-            .replace("{y}", position.y)
-            .replace("{-y}", position["-y"]),
+            .replace("{z}", position.z.toString())
+            .replace("{x}", position.x.toString())
+            .replace("{y}", position.y.toString())
+            .replace("{-y}", position["-y"]?.toString() || ""),
           position.x,
           position.y,
           position.z,
@@ -82,18 +144,18 @@ export function useTilesDevice(): any {
         );
       } catch (error) {
         try {
-          await fetchTile(
-            endPoint
-              .replace("{z}", position.z)
-              .replace("{x}", position.x)
-              .replace("{y}", position.y)
-              .replace("{-y}", position["-y"]),
-            position.x,
-            position.y,
-            position.z,
+          await fetchTile({
+            url: endPoint
+              .replace("{z}", position.z.toString())
+              .replace("{x}", position.x.toString())
+              .replace("{y}", position.y.toString())
+              .replace("{-y}", position["-y"]?.toString() || ""),
+            x: position.x,
+            y: position.y,
+            z: position.z,
             extensao,
             name,
-          );
+          });
         } catch (error) {
           console.log(
             `Não foi possível baixar a tile ${position.z}/${position.x}/${position.y}.${extensao}`,
@@ -103,6 +165,12 @@ export function useTilesDevice(): any {
     }
 
     await listFiles();
+
+    setLoading({
+      loading: false,
+      message: `Tiles baixadas com sucesso`,
+      progress: 100,
+    });
   }
 
   async function fetchTileCapacitor(
@@ -112,7 +180,7 @@ export function useTilesDevice(): any {
     z: number,
     extensao: string,
     name: string,
-  ) {
+  ): Promise<Photo | void> {
     try {
       console.log("fetchTileCapacitor", url);
       const imageResponse: HttpResponse = await CapacitorHttp.get({
@@ -137,7 +205,7 @@ export function useTilesDevice(): any {
         saved: true,
       };
 
-      savePicture(
+      await savePicture(
         image,
         `${diretorioTiles}/${name}/${z}/${x}/${y}.${extensao}`,
       );
@@ -148,14 +216,14 @@ export function useTilesDevice(): any {
     }
   }
 
-  async function fetchTile(
-    url: string,
-    x: number,
-    y: number,
-    z: number,
-    extensao: string,
-    name: string,
-  ) {
+  async function fetchTile({
+    url,
+    x,
+    y,
+    z,
+    extensao,
+    name,
+  }: FetchTileOptions): Promise<Photo | void> {
     try {
       console.log("fetchTile", url);
       const imageResponse = await (await fetch(url)).blob();
@@ -167,7 +235,7 @@ export function useTilesDevice(): any {
         saved: true,
       };
 
-      savePicture(
+      await savePicture(
         image,
         `${diretorioTiles}/${name}/${z}/${x}/${y}.${extensao}`,
       );
@@ -218,7 +286,10 @@ export function useTilesDevice(): any {
     }
   }
 
-  async function loadTilesFromDevice(map: RefObject<RMap>, filePath: string) {
+  async function loadTilesFromDevice(
+    map: RefObject<RMap>,
+    filePath: string,
+  ): Promise<void> {
     const m = map.current?.ol;
 
     if (!m) {
@@ -229,7 +300,7 @@ export function useTilesDevice(): any {
       url: `diretorio_tiles/${filePath}/{z}/{x}/{y}.png`,
       maxZoom: 20,
       crossOrigin: "anonymous",
-      tileLoadFunction: async (imageTile: any, src) => {
+      tileLoadFunction: async (imageTile: any, src: string) => {
         imageTile.getImage().src = await loadPicture(src);
       },
     });
@@ -238,7 +309,6 @@ export function useTilesDevice(): any {
       source,
       zIndex: 12,
       visible: true,
-      offline: true,
     };
 
     const layer = new TileLayer(layerOptions);
@@ -264,5 +334,11 @@ export function useTilesDevice(): any {
     listFiles();
   }, []);
 
-  return { fetchTilesFromLote, loadTilesFromDevice, files };
+  return {
+    fetchTilesFromLote,
+    loadTilesFromDevice,
+    files,
+    loading,
+    setLoading,
+  };
 }

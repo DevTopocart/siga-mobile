@@ -1,3 +1,4 @@
+import { Network } from "@capacitor/network";
 import {
   IonButton,
   IonContent,
@@ -17,17 +18,17 @@ import {
 } from "@ionic/react";
 import {
   addOutline,
+  download,
   downloadOutline,
   eye,
   eyeOff,
   layersOutline,
-  download,
 } from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router";
 import BackButton from "../../components/BackButton";
 import { useApp } from "../../contexts/AppContext";
-import { useLoading } from "../../hooks/useLoading";
+import { useTilesDevice } from "../../hooks/useTilesDevice";
 import { Basemap, FeatureType, LayerMetadata } from "../../interfaces";
 import {
   getLayerList,
@@ -42,13 +43,10 @@ import {
   getLayerStyle,
 } from "../../services/geoserver";
 import { getTMSTiles } from "../../utils/mercatorToTileXY";
-import { useTilesDevice } from "../../hooks/useTilesDevice";
-import { Network } from "@capacitor/network";
 
 export default function LayerManager() {
   const { basemaps, setBasemaps } = useApp();
 
-  const { loading, setLoading } = useLoading();
   const history = useHistory();
   const [onlineLayers, setOnlineLayers] = useState<FeatureType[]>();
   const [localLayers, setLocalLayers] = useState<LayerMetadata[]>();
@@ -57,18 +55,14 @@ export default function LayerManager() {
 
   const tilesDevice = useTilesDevice();
 
-  async function fetchOrtofotos(state: any) {
-    setLoading({
-      loading: true,
-      message: "Baixando ortofotos",
-      progress: 0,
-    });
+  const { setLoading, loading } = tilesDevice;
+
+  async function fetchOrtofotos(state: {
+    url: string;
+    boundingBox: [number, number, number, number];
+    name: string;
+  }) {
     await downloadOrtofotos(state);
-    setLoading({
-      loading: false,
-      message: "Ortofotos baixadas com sucesso",
-      progress: 100,
-    });
   }
 
   useEffect(() => {
@@ -113,7 +107,11 @@ export default function LayerManager() {
     }
   }, [history.location.state]);
 
-  async function downloadOrtofotos(state: any) {
+  async function downloadOrtofotos(state: {
+    url: string;
+    boundingBox: [number, number, number, number];
+    name: string;
+  }) {
     await tilesDevice.fetchTilesFromLote(
       [
         {
@@ -154,10 +152,10 @@ export default function LayerManager() {
         await Promise.all(
           data.features.map(async (feature: any) => {
             await insertFeature(layer, feature);
-            setLoading((current) => ({
-              ...current,
+            setLoading({
+              ...loading,
               progress: startIndex / data.totalFeatures!,
-            }));
+            });
           }),
         );
 
@@ -195,7 +193,7 @@ export default function LayerManager() {
     });
   }
 
-  async function handleDownloadOrtofoto(item: any) {
+  async function handleDownloadOrtofoto(item: { name: string; url: string }) {
     history.push(`/map`, {
       url: item.url,
       name: item.name,
@@ -272,7 +270,7 @@ export default function LayerManager() {
         )}
       </IonHeader>
       <IonContent>
-        <IonLoading isOpen={loading.loading} message={`Carregando`} />
+        <IonLoading isOpen={loading.loading} message={loading.message} />
         <IonHeader
           style={{
             display: "flex",
