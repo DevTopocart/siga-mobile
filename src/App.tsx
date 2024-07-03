@@ -26,14 +26,12 @@ import Intro from "./pages/Intro";
 import LayerManager from "./pages/LayerManager";
 import List from "./pages/List";
 import Map from "./pages/Map";
-import { makeDatabase } from "./services/db";
 import "./theme/globals.css";
 import "./theme/variables.css";
 
 /* Import Pages */
 
 setupIonicReact();
-makeDatabase();
 
 export default function App() {
   return (

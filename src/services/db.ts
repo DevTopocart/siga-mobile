@@ -19,8 +19,11 @@ export async function showData() {
   try {
     const data = await db.query("SELECT * FROM data");
     const layers = await db.query("SELECT * FROM layers");
+    const proj_defs = await db.query("SELECT * FROM proj_defs");
+
     console.log("data ->", data.values);
     console.log("layers ->", layers.values);
+    console.log("proj_defs ->", proj_defs.values);
   } catch (error) {
     console.error(error);
   }
@@ -29,6 +32,8 @@ export async function showData() {
 export async function clearData() {
   try {
     await db.query("DELETE FROM data");
+    await db.query("DELETE FROM layers");
+    await db.query("DELETE FROM proj_defs");
   } catch (error) {
     console.error(error);
   }
@@ -253,5 +258,41 @@ export async function updateFeicao(fid: string, data: GeoserverGeoJSONFeature) {
     `);
   } catch (error) {
     throw error;
+  }
+}
+
+export async function postActiveBasemap(basemap: string, key: string) {
+  try {
+    const existingRecord = await getActiveBasemap(key);
+
+    if (existingRecord) {
+      await db.query(`UPDATE proj_defs SET data = ? WHERE "key" = ?`, [
+        key,
+        JSON.stringify(basemap),
+      ]);
+    } else {
+      await db.query(`INSERT INTO proj_defs ("key", data) VALUES (?, ?)`, [
+        key,
+        JSON.stringify(basemap),
+      ]);
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function getActiveBasemap(key: string) {
+  try {
+    const query = await db.query(`
+      SELECT * FROM proj_defs WHERE key = '${key}';
+    `);
+
+    if (query.values[0].data) {
+      return JSON.parse(query.values[0].data);
+    } else {
+      return undefined;
+    }
+  } catch (error) {
+    return undefined;
   }
 }

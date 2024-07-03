@@ -1,7 +1,14 @@
-import { SetStateAction, createContext, useContext, useState } from "react";
+import {
+  SetStateAction,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { RView } from "rlayers/RMap";
 import { basemaps as possibleBasemaps } from "../../basemaps";
 import { Basemaps } from "../../interfaces";
+import { getActiveBasemap, makeDatabase } from "../../services/db";
 
 interface IAppContext {
   basemaps: Basemaps;
@@ -35,6 +42,32 @@ export function AppProvider({ children }: any) {
   });
 
   const [view, setView] = useState<RView>(initialView);
+
+  async function initDatabase() {
+    await makeDatabase();
+  }
+
+  useEffect(() => {
+    async function findActiveBasemap() {
+      await initDatabase();
+
+      const activeBasemap = await getActiveBasemap("activeBasemap");
+
+      if (activeBasemap) {
+        setBasemaps({
+          active: {
+            name: activeBasemap,
+            url: basemaps.basemaps.find(
+              (basemap) => basemap.name === activeBasemap,
+            )?.url!,
+          },
+          basemaps: basemaps.basemaps,
+        });
+      }
+    }
+
+    findActiveBasemap();
+  }, []);
 
   return (
     <AppContext.Provider
