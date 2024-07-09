@@ -152,10 +152,10 @@ export default function LayerManager() {
         await Promise.all(
           data.features.map(async (feature: any) => {
             await insertFeature(layer, feature);
-            setLoading({
-              ...loading,
+            setLoading((current) => ({
+              ...current,
               progress: startIndex / data.totalFeatures!,
-            });
+            }));
           }),
         );
 
