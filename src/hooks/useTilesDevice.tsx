@@ -29,6 +29,12 @@ interface FetchTileOptions {
   name: string;
 }
 
+type LoadingState = {
+  loading: boolean;
+  message: string;
+  progress: number;
+};
+
 interface UseTilesDevice {
   fetchTilesFromLote: (
     baseMaps: BaseMap[],
@@ -40,11 +46,7 @@ interface UseTilesDevice {
   ) => Promise<void>;
   files: string[];
   loading: { loading: boolean; message: string; progress: number };
-  setLoading: (loading: {
-    loading: boolean;
-    message: string;
-    progress: number;
-  }) => void;
+  setLoading: React.Dispatch<React.SetStateAction<LoadingState>>;
 }
 
 export function useTilesDevice(): UseTilesDevice {
